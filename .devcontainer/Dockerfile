@@ -3,13 +3,16 @@
 FROM ghcr.io/chatwoot/chatwoot_codespace:latest
 
 # Do the set up required for chatwoot app
+USER root
 WORKDIR /workspace
+RUN chown -R vscode:vscode /workspace
 
 # Copy dependency files first for better caching
-COPY package.json pnpm-lock.yaml ./
-COPY Gemfile Gemfile.lock ./
+COPY --chown=vscode:vscode package.json pnpm-lock.yaml ./
+COPY --chown=vscode:vscode Gemfile Gemfile.lock ./
 
 # Install dependencies (will be cached if files don't change)
+USER vscode
 RUN pnpm install --frozen-lockfile && \
     gem install bundler && \
     bundle install --jobs=$(nproc)
