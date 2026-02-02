@@ -9,7 +9,7 @@ Estrutura completa do AI-Context criada:
 ```
 ✅ 7 documentos de referência (docs/)
 ✅ 14 agents built-in + 3 custom (agents/)
-✅ 8 skills detalhados (agents/skills/)
+✅ 8 skills detalhados (skills/)
 ✅ Sistema de plans (plans/)
 ✅ Architecture Decision Records (decisions/)
 ✅ Workflow PREVC configurado
@@ -40,7 +40,7 @@ cat .context/agents/README.md
 cat .context/agents/chatwoot-specialist.yaml
 
 # Skills de Ruby on Rails
-cat .context/agents/skills/ruby-rails.yaml
+cat .context/skills/ruby-rails.yaml
 ```
 
 ### 3. Entenda o Workflow PREVC (10 min)
@@ -157,13 +157,13 @@ git commit -m "feat(filters): implement advanced conversation filters"
 
 ```bash
 # Backend patterns (Services, Jobs, Models)
-vim .context/agents/skills/ruby-rails.yaml
+vim .context/skills/ruby-rails.yaml
 
 # Frontend patterns (Vue, Composables, Vuex)
-vim .context/agents/skills/vue-frontend.yaml
+vim .context/skills/vue-frontend.yaml
 
 # Testing patterns (RSpec, Vitest)
-vim .context/agents/skills/testing.yaml
+vim .context/skills/testing.yaml
 
 # Comando específico
 grep -r "factory" .context/docs/CHEATSHEET.md
@@ -303,7 +303,7 @@ git commit -m "docs: add ADR-005 for my decision"
   "AI Context Skill": {
     "prefix": "skill",
     "body": [
-      "vim .context/agents/skills/${1:ruby-rails}.yaml"
+      "vim .context/skills/${1:ruby-rails}.yaml"
     ]
   }
 }
@@ -415,7 +415,7 @@ workflow-manage setAutonomous --enabled=true --reason="Simple change"
 👉 Use grep:
 
 ```bash
-grep -r "pattern-name" .context/agents/skills/
+grep -r "pattern-name" .context/skills/
 ```
 
 ---
