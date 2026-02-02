@@ -1,0 +1,351 @@
+# Example Plan - Advanced Filters Feature
+# This is a template showing the structure of a plan
+
+name: advanced-filters
+slug: advanced-filters
+title: "Implement Advanced Filters for Conversations"
+version: "1.0"
+created: "2026-02-02"
+updated: "2026-02-02"
+status: in_progress  # pending | in_progress | completed | cancelled
+
+# Summary
+summary: |
+  Add advanced filtering capabilities to the conversations list,
+  allowing agents to filter by multiple criteria simultaneously.
+
+# Goal
+goal: |
+  Enable agents to search and filter conversations more effectively,
+  reducing time to find relevant conversations.
+
+# Success Criteria
+successCriteria:
+  - "Agents can apply up to 10 filters simultaneously"
+  - "Filter results load in < 500ms"
+  - "Filters are preserved across page reloads"
+  - "API rate limiting protects against abuse"
+
+# Current Phase
+currentPhase: execution  # planning | review | execution | validation | complete
+
+# PREVC Phases
+phases:
+  planning:
+    status: completed
+    startedAt: "2026-02-01T10:00:00Z"
+    completedAt: "2026-02-01T14:00:00Z"
+    artifacts:
+      - path: ".context/plans/advanced-filters/requirements.md"
+        description: "Requirements document"
+      - path: ".context/plans/advanced-filters/architecture.md"
+        description: "Architecture design"
+    
+    steps:
+      - index: 1
+        name: "Analyze requirements"
+        status: completed
+        assignedTo: "architect-specialist"
+        output: "requirements.md"
+        notes: "Documented all filter types and UI mockups"
+      
+      - index: 2
+        name: "Design architecture"
+        status: completed
+        assignedTo: "architect-specialist"
+        output: "architecture.md"
+        notes: "Service object pattern, JSONB filter storage"
+      
+      - index: 3
+        name: "Break down tasks"
+        status: completed
+        assignedTo: "architect-specialist"
+        output: "Task list in this plan"
+  
+  review:
+    status: completed
+    startedAt: "2026-02-01T14:30:00Z"
+    completedAt: "2026-02-01T16:00:00Z"
+    approvals:
+      - reviewer: "security-auditor"
+        status: approved
+        notes: "Input validation looks good, rate limiting recommended"
+      - reviewer: "performance-optimizer"
+        status: approved
+        notes: "Add index on (account_id, status, priority, created_at)"
+    
+    steps:
+      - index: 1
+        name: "Security review"
+        status: completed
+        assignedTo: "security-auditor"
+        notes: "No security concerns, recommended rate limiting"
+      
+      - index: 2
+        name: "Performance review"
+        status: completed
+        assignedTo: "performance-optimizer"
+        notes: "Recommended composite index"
+      
+      - index: 3
+        name: "Architecture validation"
+        status: completed
+        assignedTo: "code-reviewer"
+        notes: "Design approved, follows Chatwoot patterns"
+  
+  execution:
+    status: in_progress
+    startedAt: "2026-02-01T16:30:00Z"
+    
+    steps:
+      - index: 1
+        name: "Create ConversationFilterService"
+        status: completed
+        assignedTo: "backend-specialist"
+        output: "app/services/conversation_filter_service.rb"
+        notes: "Implemented with max 10 filters validation"
+      
+      - index: 2
+        name: "Add database index"
+        status: completed
+        assignedTo: "database-specialist"
+        output: "db/migrate/20260201_add_conversation_filters_index.rb"
+        notes: "Composite index on commonly filtered columns"
+      
+      - index: 3
+        name: "Update ConversationsController"
+        status: in_progress
+        assignedTo: "backend-specialist"
+        output: "app/controllers/api/v1/accounts/conversations_controller.rb"
+        notes: "In progress - adding filter params"
+      
+      - index: 4
+        name: "Create AdvancedFilters Vue component"
+        status: pending
+        assignedTo: "frontend-specialist"
+        output: "app/javascript/dashboard/components/AdvancedFilters.vue"
+      
+      - index: 5
+        name: "Integrate filters in conversation list"
+        status: pending
+        assignedTo: "frontend-specialist"
+  
+  validation:
+    status: pending
+    
+    steps:
+      - index: 1
+        name: "Write RSpec tests for service"
+        status: pending
+        assignedTo: "test-writer"
+      
+      - index: 2
+        name: "Write API integration tests"
+        status: pending
+        assignedTo: "test-writer"
+      
+      - index: 3
+        name: "Write Vitest component tests"
+        status: pending
+        assignedTo: "test-writer"
+      
+      - index: 4
+        name: "Performance testing"
+        status: pending
+        assignedTo: "performance-optimizer"
+      
+      - index: 5
+        name: "Security audit"
+        status: pending
+        assignedTo: "security-auditor"
+  
+  complete:
+    status: pending
+    
+    steps:
+      - index: 1
+        name: "Update API documentation"
+        status: pending
+        assignedTo: "documentation-writer"
+        output: ".context/docs/API.md"
+      
+      - index: 2
+        name: "Write changelog entry"
+        status: pending
+        assignedTo: "documentation-writer"
+      
+      - index: 3
+        name: "Create release notes"
+        status: pending
+        assignedTo: "documentation-writer"
+
+# Decisions Made
+decisions:
+  - id: "001"
+    title: "Use Service Object Pattern"
+    description: |
+      Use a dedicated ConversationFilterService to encapsulate
+      filter logic instead of adding complexity to the model.
+    rationale: |
+      - Keeps model lean
+      - Easier to test
+      - Follows Chatwoot patterns
+    alternatives:
+      - "Add scopes directly to Conversation model"
+      - "Use query object pattern"
+      - "Implement in controller"
+    chosenAlternative: "Service Object"
+    decidedBy: "architect-specialist"
+    decidedAt: "2026-02-01T12:00:00Z"
+    phase: planning
+  
+  - id: "002"
+    title: "Limit to 10 Simultaneous Filters"
+    description: |
+      Enforce a maximum of 10 filters to prevent overly complex
+      queries that could impact performance.
+    rationale: |
+      - Prevents performance degradation
+      - Covers 99% of use cases
+      - Easy to increase if needed
+    alternatives:
+      - "No limit"
+      - "Limit to 5 filters"
+      - "Dynamic limit based on query complexity"
+    chosenAlternative: "10 filters"
+    decidedBy: "performance-optimizer"
+    decidedAt: "2026-02-01T15:00:00Z"
+    phase: review
+  
+  - id: "003"
+    title: "Add Composite Database Index"
+    description: |
+      Add composite index on (account_id, status, priority, created_at)
+      for optimized filter queries.
+    rationale: |
+      - Most common filter combinations
+      - Significant query performance improvement
+      - Small storage overhead
+    alternatives:
+      - "Individual indexes"
+      - "No new index"
+      - "Materialized view"
+    chosenAlternative: "Composite index"
+    decidedBy: "database-specialist"
+    decidedAt: "2026-02-01T15:30:00Z"
+    phase: review
+
+# Technical Specifications
+technicalSpecs:
+  backend:
+    files:
+      - "app/services/conversation_filter_service.rb"
+      - "app/controllers/api/v1/accounts/conversations_controller.rb"
+      - "db/migrate/20260201_add_conversation_filters_index.rb"
+    
+    apiEndpoint:
+      path: "GET /api/v1/accounts/{account_id}/conversations"
+      params:
+        - name: "filters"
+          type: "object"
+          description: "Filter criteria"
+          example:
+            status: "open"
+            priority: "high"
+            assignee_id: 123
+            team_id: 5
+            labels: ["urgent", "bug"]
+            created_after: "2026-01-01"
+    
+    validations:
+      - "Max 10 filters"
+      - "Valid filter keys only"
+      - "Type validation for values"
+  
+  frontend:
+    files:
+      - "app/javascript/dashboard/components/AdvancedFilters.vue"
+      - "app/javascript/dashboard/routes/dashboard/conversation/ConversationList.vue"
+    
+    components:
+      - name: "AdvancedFilters"
+        props:
+          - "availableFilters (Array)"
+          - "activeFilters (Object)"
+        emits:
+          - "update:activeFilters"
+          - "apply"
+          - "clear"
+
+# Dependencies
+dependencies:
+  internal:
+    - "Conversation model"
+    - "ConversationFinder service (existing)"
+    - "Conversation API"
+  
+  external:
+    - "PostgreSQL GIN index support"
+    - "Vue 3 Composition API"
+
+# Risks & Mitigation
+risks:
+  - risk: "Complex queries impact performance"
+    severity: medium
+    mitigation: "10 filter limit, composite index, query timeout"
+  
+  - risk: "Too many filters confuse users"
+    severity: low
+    mitigation: "Clear UI, saved filter presets"
+
+# Testing Strategy
+testingStrategy:
+  unit:
+    - "ConversationFilterService with various filter combinations"
+    - "Edge cases (empty filters, invalid filters)"
+    - "Max filter limit enforcement"
+  
+  integration:
+    - "API endpoint with filters"
+    - "Authorization checks"
+    - "Rate limiting"
+  
+  performance:
+    - "Query performance with indexes"
+    - "Load testing with concurrent requests"
+  
+  e2e:
+    - "User applies filters and sees results"
+    - "Filters persist across page reloads"
+
+# Rollout Plan
+rollout:
+  - phase: "Internal Testing"
+    duration: "3 days"
+    criteria: "All tests pass, no performance regressions"
+  
+  - phase: "Beta Release"
+    duration: "1 week"
+    criteria: "Selected beta users, monitor errors and performance"
+  
+  - phase: "General Availability"
+    criteria: "No critical bugs, positive user feedback"
+
+# Monitoring
+monitoring:
+  metrics:
+    - "Filter API response time"
+    - "Number of filters applied (histogram)"
+    - "Filter error rate"
+    - "Query performance (database)"
+  
+  alerts:
+    - "Response time > 1s"
+    - "Error rate > 1%"
+    - "Database CPU > 80%"
+
+# Notes
+notes: |
+  - Consider adding saved filter presets in future iteration
+  - Monitor usage to optimize which filters are most common
+  - May need to adjust filter limit based on real-world usage

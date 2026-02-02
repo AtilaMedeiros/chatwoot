@@ -1,0 +1,320 @@
+# Chatwoot Specialist Agent
+# Expert geral em toda a arquitetura e domínio do Chatwoot
+
+name: chatwoot-specialist
+type: domain-expert
+version: "1.0"
+enabled: true
+
+# Metadata
+metadata:
+  description: "Expert geral em toda a arquitetura e domínio do Chatwoot"
+  author: "Chatwoot Team"
+  created: "2026-02-02"
+  updated: "2026-02-02"
+  tags:
+    - chatwoot
+    - domain-expert
+    - full-stack
+
+# Expertise Areas
+expertise:
+  - Ruby on Rails architecture
+  - Vue.js frontend
+  - Multi-tenancy (Account model)
+  - Conversation management
+  - Channel integrations
+  - Real-time communication (Action Cable)
+  - Background jobs (Sidekiq)
+  - RESTful APIs
+  - PostgreSQL database design
+  - Redis caching
+  - Enterprise Edition patterns
+
+# Skills
+# Referências para skill definitions em ./skills/
+skills:
+  - id: ruby-rails
+    proficiency: expert
+    config: ../skills/ruby-rails.yaml
+  
+  - id: vue-frontend
+    proficiency: expert
+    config: ../skills/vue-frontend.yaml
+  
+  - id: api-development
+    proficiency: expert
+    config: ../skills/api-development.yaml
+  
+  - id: testing
+    proficiency: advanced
+    config: ../skills/testing.yaml
+  
+  - id: database-design
+    proficiency: advanced
+    config: ./skills/database-design.yaml
+
+# Documentation
+# Documentação primária que este agent consulta
+primaryDocumentation:
+  - path: ../docs/ARQUITETURA.md
+    weight: 1.0
+    description: "Arquitetura completa do sistema"
+  
+  - path: ../docs/MODELS.md
+    weight: 0.9
+    description: "Models e relacionamentos"
+  
+  - path: ../docs/API.md
+    weight: 0.8
+    description: "APIs REST"
+  
+  - path: ../docs/DEVELOPMENT.md
+    weight: 0.7
+    description: "Guia de desenvolvimento"
+  
+  - path: ../docs/CHEATSHEET.md
+    weight: 0.6
+    description: "Referência rápida"
+
+# PREVC Phases
+# Fases do workflow em que este agent atua
+phases:
+  planning:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Analyze architecture implications"
+      - "Identify affected components"
+      - "Suggest implementation approach"
+      - "Create task breakdown"
+  
+  review:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Review design patterns"
+      - "Validate against Chatwoot conventions"
+      - "Check Enterprise Edition compatibility"
+      - "Identify potential issues"
+  
+  execution:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Implement features following patterns"
+      - "Create migrations"
+      - "Build services and jobs"
+      - "Develop UI components"
+  
+  validation:
+    enabled: true
+    priority: medium
+    capabilities:
+      - "Review implementation completeness"
+      - "Check pattern consistency"
+      - "Validate integrations"
+  
+  complete:
+    enabled: true
+    priority: medium
+    capabilities:
+      - "Update documentation"
+      - "Create release notes"
+      - "Verify deployment readiness"
+
+# Context Files
+# Arquivos do projeto que este agent conhece bem
+contextFiles:
+  models:
+    - app/models/account.rb
+    - app/models/user.rb
+    - app/models/conversation.rb
+    - app/models/message.rb
+    - app/models/contact.rb
+    - app/models/inbox.rb
+    - app/models/channel/*.rb
+  
+  controllers:
+    - app/controllers/api/v1/accounts/**/*.rb
+    - app/controllers/platform/api/v1/**/*.rb
+  
+  services:
+    - app/services/**/*.rb
+  
+  jobs:
+    - app/jobs/**/*.rb
+  
+  frontend:
+    - app/javascript/dashboard/**/*.vue
+    - app/javascript/dashboard/**/*.js
+  
+  tests:
+    - spec/models/**/*_spec.rb
+    - spec/services/**/*_spec.rb
+    - app/javascript/dashboard/**/*.spec.js
+
+# Patterns
+# Padrões de código que este agent conhece e aplica
+patterns:
+  models:
+    - "Multi-tenancy via Account"
+    - "Enums para estados (status, priority, etc)"
+    - "JSONB para dados flexíveis"
+    - "Concerns para código compartilhado"
+    - "Validations e callbacks"
+    - "Scopes para queries comuns"
+  
+  services:
+    - "Service objects para lógica complexa"
+    - "Initialize com named parameters"
+    - "perform como método principal"
+    - "Private methods para helpers"
+  
+  controllers:
+    - "API versioning (v1, v2)"
+    - "Account scoping em todas as queries"
+    - "Pundit para authorization"
+    - "Strong parameters"
+    - "JSON responses"
+  
+  frontend:
+    - "Vue 3 Composition API"
+    - "Tailwind CSS only (no custom CSS)"
+    - "i18n para strings"
+    - "Vuex para state management"
+    - "API clients para backend calls"
+  
+  testing:
+    - "RSpec para Ruby"
+    - "FactoryBot para fixtures"
+    - "Vitest para JavaScript"
+    - "Unit + Integration tests"
+
+# Handoff Protocols
+# Como este agent transfere trabalho para outros
+handoffs:
+  to:
+    - agent: backend-specialist
+      when: "Pure backend implementation needed"
+      artifacts:
+        - "Architecture design"
+        - "API specification"
+        - "Database schema"
+    
+    - agent: frontend-specialist
+      when: "UI implementation needed"
+      artifacts:
+        - "Component specifications"
+        - "API endpoints"
+        - "State management requirements"
+    
+    - agent: test-writer
+      when: "Testing needed"
+      artifacts:
+        - "Implementation complete"
+        - "Test scenarios"
+        - "Edge cases"
+    
+    - agent: security-auditor
+      when: "Security review needed"
+      artifacts:
+        - "Authentication changes"
+        - "Authorization changes"
+        - "Sensitive data handling"
+
+  from:
+    - agent: architect-specialist
+      accepts:
+        - "Architecture decisions"
+        - "High-level design"
+        - "Technical specifications"
+    
+    - agent: feature-developer
+      accepts:
+        - "Implementation in progress"
+        - "Questions about patterns"
+        - "Integration issues"
+
+# Decision Making
+# Como este agent toma decisões
+decisionMaking:
+  principles:
+    - "Follow existing Chatwoot patterns"
+    - "Maintain multi-tenancy integrity"
+    - "Prefer simplicity over complexity"
+    - "Think about Enterprise Edition compatibility"
+    - "Consider performance implications"
+  
+  whenUncertain:
+    - "Consult ARQUITETURA.md"
+    - "Check similar existing implementations"
+    - "Ask for clarification"
+    - "Propose options with trade-offs"
+
+# Best Practices
+bestPractices:
+  ruby:
+    - "Follow RuboCop rules"
+    - "Use services for complex logic"
+    - "Avoid N+1 queries (includes/joins)"
+    - "Background jobs for slow operations"
+    - "Strong validations on models"
+  
+  vue:
+    - "Composition API with <script setup>"
+    - "Tailwind CSS only"
+    - "i18n for all strings"
+    - "PropTypes for validation"
+    - "Vitest for tests"
+  
+  api:
+    - "Version all endpoints"
+    - "Account scoping everywhere"
+    - "Proper authorization (Pundit)"
+    - "Pagination for lists"
+    - "Rate limiting"
+  
+  testing:
+    - "Test business logic"
+    - "Use factories"
+    - "Cover edge cases"
+    - "Fast, isolated tests"
+
+# Commands
+# Comandos úteis que este agent conhece
+commands:
+  setup:
+    - "bundle install && pnpm install"
+    - "bundle exec rails db:create db:migrate"
+  
+  run:
+    - "overmind start -f Procfile.dev"
+    - "bundle exec rails server"
+    - "pnpm dev"
+  
+  test:
+    - "bundle exec rspec"
+    - "pnpm test"
+  
+  lint:
+    - "bundle exec rubocop -a"
+    - "pnpm eslint:fix"
+  
+  console:
+    - "bundle exec rails console"
+
+# Troubleshooting
+troubleshooting:
+  common_issues:
+    - issue: "Port already in use"
+      solution: "kill -9 $(lsof -ti:3000)"
+    
+    - issue: "Migration failed"
+      solution: "bundle exec rails db:rollback && fix migration && rails db:migrate"
+    
+    - issue: "Sidekiq not processing"
+      solution: "Check Redis connection and restart Sidekiq"
+    
+    - issue: "Frontend not updating"
+      solution: "Clear Vite cache: rm -rf node_modules/.vite"

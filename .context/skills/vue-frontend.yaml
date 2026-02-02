@@ -1,0 +1,497 @@
+# Vue.js Frontend Skill
+# Desenvolvimento frontend com Vue 3
+
+name: vue-frontend
+version: "1.0"
+category: frontend
+description: "Vue.js 3 development with Composition API, Tailwind CSS, and modern frontend practices"
+
+proficiencyLevels:
+  beginner:
+    description: "Basic Vue.js knowledge"
+    capabilities:
+      - "Understand component structure"
+      - "Use reactive data (ref, reactive)"
+      - "Handle events (@click, @input)"
+      - "Use v-if, v-for, v-model"
+      - "Props and emits"
+      - "Basic Tailwind classes"
+  
+  advanced:
+    description: "Proficient Vue developer"
+    capabilities:
+      - "Composition API with <script setup>"
+      - "Composables for reusable logic"
+      - "Vuex state management"
+      - "API integration"
+      - "Custom directives"
+      - "Lifecycle hooks"
+      - "Component testing with Vitest"
+      - "Tailwind customization"
+  
+  expert:
+    description: "Vue architect"
+    capabilities:
+      - "Application architecture"
+      - "Complex state management"
+      - "Performance optimization"
+      - "Custom Vue plugins"
+      - "SSR considerations"
+      - "Build optimization"
+      - "Design system implementation"
+
+tools:
+  - name: Vite
+    purpose: "Build tool and dev server"
+    commands:
+      - "pnpm dev"
+      - "pnpm build"
+      - "pnpm preview"
+  
+  - name: ESLint
+    purpose: "JavaScript linter"
+    commands:
+      - "pnpm eslint"
+      - "pnpm eslint:fix"
+      - "pnpm eslint app/javascript/dashboard/"
+  
+  - name: Vitest
+    purpose: "Testing framework"
+    commands:
+      - "pnpm test"
+      - "pnpm test:watch"
+      - "pnpm test Button.spec.js"
+  
+  - name: Vue DevTools
+    purpose: "Browser extension for debugging"
+    usage: "Install Chrome/Firefox extension"
+  
+  - name: Tailwind CSS
+    purpose: "Utility-first CSS framework"
+    config: "tailwind.config.js"
+
+patterns:
+  - name: "Composition API Component"
+    description: "Modern Vue 3 component with script setup"
+    proficiency: advanced
+    example: |
+      <script setup>
+      import { ref, computed, onMounted } from 'vue';
+
+      const props = defineProps({
+        title: {
+          type: String,
+          required: true
+        },
+        count: {
+          type: Number,
+          default: 0
+        }
+      });
+
+      const emit = defineEmits(['update', 'delete']);
+
+      const localCount = ref(props.count);
+      const doubleCount = computed(() => localCount.value * 2);
+
+      const increment = () => {
+        localCount.value++;
+        emit('update', localCount.value);
+      };
+
+      onMounted(() => {
+        console.log('Component mounted');
+      });
+      </script>
+
+      <template>
+        <div class="p-4 bg-white rounded shadow">
+          <h2 class="text-xl font-bold mb-2">{{ title }}</h2>
+          <p class="text-gray-600">Count: {{ localCount }}</p>
+          <p class="text-gray-600">Double: {{ doubleCount }}</p>
+          <button
+            class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            @click="increment"
+          >
+            Increment
+          </button>
+        </div>
+      </template>
+  
+  - name: "Composable"
+    description: "Reusable composition function"
+    proficiency: advanced
+    example: |
+      // composables/useConversation.js
+      import { ref, computed } from 'vue';
+      import ConversationAPI from '@/api/conversations';
+
+      export function useConversation(conversationId) {
+        const conversation = ref(null);
+        const loading = ref(false);
+        const error = ref(null);
+
+        const isOpen = computed(() => conversation.value?.status === 'open');
+        const isResolved = computed(() => conversation.value?.status === 'resolved');
+
+        const fetchConversation = async () => {
+          loading.value = true;
+          try {
+            const response = await ConversationAPI.show(conversationId);
+            conversation.value = response.data;
+          } catch (e) {
+            error.value = e.message;
+          } finally {
+            loading.value = false;
+          }
+        };
+
+        const toggleStatus = async () => {
+          try {
+            await ConversationAPI.toggleStatus(conversationId);
+            conversation.value.status = isOpen.value ? 'resolved' : 'open';
+          } catch (e) {
+            error.value = e.message;
+          }
+        };
+
+        return {
+          conversation,
+          loading,
+          error,
+          isOpen,
+          isResolved,
+          fetchConversation,
+          toggleStatus
+        };
+      }
+
+      // Usage in component:
+      import { useConversation } from '@/composables/useConversation';
+
+      const { conversation, loading, toggleStatus } = useConversation(props.conversationId);
+  
+  - name: "Vuex Store Module"
+    description: "State management"
+    proficiency: advanced
+    example: |
+      // store/modules/conversations.js
+      import ConversationAPI from '@/api/conversations';
+
+      export default {
+        namespaced: true,
+
+        state: {
+          records: [],
+          uiFlags: {
+            isFetching: false
+          }
+        },
+
+        getters: {
+          getConversations: state => state.records,
+          getConversation: state => id => {
+            return state.records.find(c => c.id === id);
+          },
+          getUIFlags: state => state.uiFlags
+        },
+
+        mutations: {
+          SET_CONVERSATIONS(state, conversations) {
+            state.records = conversations;
+          },
+
+          ADD_CONVERSATION(state, conversation) {
+            state.records.push(conversation);
+          },
+
+          UPDATE_CONVERSATION(state, conversation) {
+            const index = state.records.findIndex(c => c.id === conversation.id);
+            if (index !== -1) {
+              state.records[index] = conversation;
+            }
+          },
+
+          SET_UI_FLAG(state, { flag, value }) {
+            state.uiFlags[flag] = value;
+          }
+        },
+
+        actions: {
+          async fetchConversations({ commit }, params) {
+            commit('SET_UI_FLAG', { flag: 'isFetching', value: true });
+            try {
+              const response = await ConversationAPI.get(params);
+              commit('SET_CONVERSATIONS', response.data.payload);
+            } catch (error) {
+              console.error(error);
+            } finally {
+              commit('SET_UI_FLAG', { flag: 'isFetching', value: false });
+            }
+          },
+
+          async toggleStatus({ commit }, conversationId) {
+            const response = await ConversationAPI.toggleStatus(conversationId);
+            commit('UPDATE_CONVERSATION', response.data);
+          }
+        }
+      };
+  
+  - name: "API Client"
+    description: "API integration"
+    proficiency: advanced
+    example: |
+      // api/ApiClient.js
+      import axios from 'axios';
+
+      class ApiClient {
+        constructor(resource, { accountScoped = false } = {}) {
+          this.accountScoped = accountScoped;
+          this.resource = resource;
+        }
+
+        get url() {
+          if (this.accountScoped) {
+            const accountId = window.WOOT.$root.$route.params.accountId;
+            return `/api/v1/accounts/${accountId}/${this.resource}`;
+          }
+          return `/api/v1/${this.resource}`;
+        }
+
+        get(params = {}) {
+          return axios.get(this.url, { params });
+        }
+
+        show(id) {
+          return axios.get(`${this.url}/${id}`);
+        }
+
+        create(data) {
+          return axios.post(this.url, data);
+        }
+
+        update(id, data) {
+          return axios.patch(`${this.url}/${id}`, data);
+        }
+
+        delete(id) {
+          return axios.delete(`${this.url}/${id}`);
+        }
+      }
+
+      // api/conversations.js
+      import ApiClient from './ApiClient';
+
+      class ConversationAPI extends ApiClient {
+        constructor() {
+          super('conversations', { accountScoped: true });
+        }
+
+        toggleStatus(conversationId) {
+          return axios.post(`${this.url}/${conversationId}/toggle_status`);
+        }
+
+        assign(conversationId, { assigneeId, teamId }) {
+          return axios.post(`${this.url}/${conversationId}/assignments`, {
+            assignee_id: assigneeId,
+            team_id: teamId
+          });
+        }
+      }
+
+      export default new ConversationAPI();
+
+bestPractices:
+  vue:
+    - "Always use Composition API with <script setup>"
+    - "Place <script setup> at the top of .vue files"
+    - "Use ref for primitives, reactive for objects"
+    - "Computed for derived state"
+    - "Define props with types and validation"
+    - "Use defineEmits for events"
+    - "Composables for reusable logic"
+    - "One component per file"
+  
+  styling:
+    - "Use Tailwind CSS utility classes ONLY"
+    - "NO custom CSS or <style> blocks"
+    - "NO inline styles"
+    - "Refer to tailwind.config.js for colors"
+    - "Use responsive classes (sm:, md:, lg:)"
+    - "Use dark mode classes when applicable"
+  
+  state:
+    - "Local state with ref/reactive"
+    - "Vuex for shared global state"
+    - "Props for parent → child"
+    - "Emits for child → parent"
+    - "Provide/inject for deep hierarchies (sparingly)"
+    - "Don't mutate props directly"
+  
+  performance:
+    - "Use v-show for frequent toggles"
+    - "Use v-if for conditional rendering"
+    - "Lazy load routes"
+    - "Split large components"
+    - "Use keep-alive for cached components"
+    - "Debounce user inputs"
+  
+  i18n:
+    - "Use $t() for all user-facing strings"
+    - "Only update en.json (English)"
+    - "Community translates other languages"
+    - "Keys in snake_case: 'conversation.status.open'"
+
+# Testing
+testing:
+  vitest:
+    - name: "Component Test"
+      example: |
+        import { describe, it, expect } from 'vitest';
+        import { mount } from '@vue/test-utils';
+        import ConversationCard from './ConversationCard.vue';
+
+        describe('ConversationCard', () => {
+          it('renders conversation title', () => {
+            const conversation = {
+              id: 1,
+              display_id: 123,
+              status: 'open'
+            };
+
+            const wrapper = mount(ConversationCard, {
+              props: { conversation }
+            });
+
+            expect(wrapper.text()).toContain('#123');
+          });
+
+          it('emits toggle-status when button clicked', async () => {
+            const wrapper = mount(ConversationCard, {
+              props: { conversation: { id: 1, status: 'open' } }
+            });
+
+            await wrapper.find('button').trigger('click');
+
+            expect(wrapper.emitted('toggle-status')).toBeTruthy();
+            expect(wrapper.emitted('toggle-status')[0]).toEqual([1]);
+          });
+        });
+  
+  commands:
+    - "pnpm test"
+    - "pnpm test:watch"
+    - "pnpm test ConversationCard.spec.js"
+
+commands:
+  development:
+    - "pnpm dev"  # Start Vite dev server
+    - "pnpm build"  # Production build
+    - "pnpm preview"  # Preview production build
+  
+  testing:
+    - "pnpm test"  # Run tests once
+    - "pnpm test:watch"  # Watch mode
+    - "pnpm test File.spec.js"  # Specific file
+  
+  linting:
+    - "pnpm eslint"  # Check
+    - "pnpm eslint:fix"  # Auto-fix
+    - "pnpm eslint app/javascript/dashboard/"  # Specific dir
+
+# Tailwind Utilities Cheat Sheet
+tailwindCheatSheet:
+  layout:
+    - "flex, grid"
+    - "justify-center, items-center"
+    - "space-x-4, space-y-2"
+    - "container, mx-auto"
+  
+  spacing:
+    - "p-4 (padding)"
+    - "m-2 (margin)"
+    - "px-6 (padding horizontal)"
+    - "mt-4 (margin top)"
+  
+  sizing:
+    - "w-full, h-screen"
+    - "max-w-7xl, min-h-screen"
+    - "text-sm, text-xl"
+  
+  colors:
+    - "bg-white, bg-gray-100"
+    - "text-gray-900, text-blue-500"
+    - "border-gray-300"
+  
+  effects:
+    - "shadow-sm, shadow-lg"
+    - "rounded, rounded-lg"
+    - "hover:bg-blue-600"
+    - "focus:ring-2"
+  
+  responsive:
+    - "sm:text-sm (≥640px)"
+    - "md:flex (≥768px)"
+    - "lg:grid-cols-3 (≥1024px)"
+    - "xl:max-w-7xl (≥1280px)"
+
+# Chatwoot-specific Patterns
+chatwootPatterns:
+  - name: "Account Context"
+    example: |
+      // Access current account
+      const accountId = this.$route.params.accountId;
+      
+      // Or from Vuex
+      computed: {
+        ...mapGetters('accounts', ['getCurrentAccount'])
+      }
+  
+  - name: "i18n Usage"
+    example: |
+      <template>
+        <h1>{{ $t('conversation.title') }}</h1>
+        <p>{{ $t('conversation.messages_count', { count: 5 }) }}</p>
+      </template>
+
+      // en.json:
+      {
+        "conversation": {
+          "title": "Conversation",
+          "messages_count": "{count} messages"
+        }
+      }
+  
+  - name: "Vuex Module Usage"
+    example: |
+      <script setup>
+      import { computed } from 'vue';
+      import { useStore } from 'vuex';
+
+      const store = useStore();
+
+      const conversations = computed(() => 
+        store.getters['conversations/getConversations']
+      );
+
+      const fetchConversations = () => {
+        store.dispatch('conversations/fetchConversations', { status: 'open' });
+      };
+      </script>
+
+documentation:
+  - path: "../docs/ARQUITETURA.md"
+    sections: ["Frontend"]
+  
+  - path: "../docs/DEVELOPMENT.md"
+    sections: ["Frontend", "Testing JavaScript"]
+  
+  - path: "../docs/CHEATSHEET.md"
+    sections: ["Frontend", "Vue Patterns"]
+
+debugging:
+  - "Vue DevTools browser extension"
+  - "console.log in methods/computed"
+  - "debugger statement"
+  - "Network tab for API calls"
+  - "Vue warnings in console"

@@ -1,0 +1,401 @@
+# Conversation Specialist Agent
+# Especialista no core do sistema - conversas e mensagens
+
+name: conversation-specialist
+type: feature-expert
+version: "1.0"
+enabled: true
+
+metadata:
+  description: "Especialista no core do sistema - conversas e mensagens"
+  author: "Chatwoot Team"
+  created: "2026-02-02"
+  focus: "Conversation and Message models"
+  domain: "Core business logic"
+
+expertise:
+  - Conversation model and lifecycle
+  - Message handling (incoming/outgoing)
+  - Status workflows (open → resolved → pending → snoozed)
+  - Priority management
+  - Assignment logic
+  - Team routing
+  - Label management
+  - Conversation filters and search
+  - SLA tracking
+  - Conversation bulk actions
+
+skills:
+  - id: ruby-rails
+    proficiency: expert
+    focus: ["Models", "Services", "Controllers"]
+  
+  - id: api-development
+    proficiency: expert
+    focus: ["Conversation API", "Message API"]
+  
+  - id: testing
+    proficiency: advanced
+    focus: ["Model specs", "Service specs"]
+
+primaryDocumentation:
+  - path: ../docs/MODELS.md
+    sections: ["Conversation", "Message", "ConversationParticipant"]
+    weight: 1.0
+  
+  - path: ../docs/API.md
+    sections: ["Conversas", "Mensagens"]
+    weight: 0.9
+  
+  - path: ../docs/ARQUITETURA.md
+    sections: ["Fluxo de Mensagens Incoming", "Fluxo de Mensagens Outgoing"]
+    weight: 0.8
+
+phases:
+  planning:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Design conversation workflows"
+      - "Plan status transitions"
+      - "Design assignment logic"
+  
+  review:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Review conversation logic"
+      - "Validate status transitions"
+      - "Check for race conditions"
+  
+  execution:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Implement conversation features"
+      - "Build message handling"
+      - "Create assignment logic"
+  
+  validation:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Test conversation flows"
+      - "Validate status changes"
+      - "Test edge cases"
+
+# Core Models
+coreModels:
+  Conversation:
+    attributes:
+      - display_id
+      - status (enum: open, resolved, pending, snoozed)
+      - priority (enum: nil, low, medium, high, urgent)
+      - assignee_id
+      - team_id
+      - inbox_id
+      - contact_id
+      - account_id
+      - additional_attributes (jsonb)
+      - custom_attributes (jsonb)
+      - snoozed_until
+      - last_activity_at
+    
+    enums:
+      status:
+        open: 0
+        resolved: 1
+        pending: 2
+        snoozed: 3
+      
+      priority:
+        low: 0
+        medium: 1
+        high: 2
+        urgent: 3
+    
+    scopes:
+      - open
+      - resolved
+      - pending
+      - snoozed
+      - unassigned
+      - assigned
+      - unattended
+      - assigned_to(agent)
+      - by_team(team)
+    
+    methods:
+      - toggle_status
+      - assign_agent(agent, team)
+      - snooze(until)
+      - reopen
+      - mute
+      - unmute
+  
+  Message:
+    attributes:
+      - content
+      - message_type (enum: incoming, outgoing, activity, template)
+      - content_type (enum: text, input_select, cards, form, etc)
+      - status (enum: sent, delivered, read, failed)
+      - sender_type (polymorphic)
+      - sender_id
+      - conversation_id
+      - account_id
+      - inbox_id
+      - source_id
+      - content_attributes (jsonb)
+    
+    enums:
+      message_type:
+        incoming: 0
+        outgoing: 1
+        activity: 2
+        template: 3
+      
+      content_type:
+        text: 0
+        input_select: 1
+        cards: 2
+        form: 3
+      
+      status:
+        sent: 0
+        delivered: 1
+        read: 2
+        failed: 3
+    
+    scopes:
+      - incoming
+      - outgoing
+      - chat
+      - today
+      - created_since(time)
+    
+    methods:
+      - webhook_data
+      - push_event_data
+      - conversation_display
+
+# Workflows
+workflows:
+  status_change:
+    open_to_resolved:
+      trigger: "Agent resolves conversation"
+      validations:
+        - "Must have at least one message"
+      side_effects:
+        - "Update last_activity_at"
+        - "Trigger resolved webhook"
+        - "Update stats"
+    
+    resolved_to_open:
+      trigger: "New message from contact OR agent reopens"
+      validations: []
+      side_effects:
+        - "Clear snoozed_until"
+        - "Update last_activity_at"
+        - "Trigger reopened webhook"
+    
+    open_to_pending:
+      trigger: "Agent marks as pending"
+      validations: []
+      side_effects:
+        - "Update last_activity_at"
+        - "Trigger pending webhook"
+    
+    any_to_snoozed:
+      trigger: "Agent snoozes conversation"
+      validations:
+        - "Must provide snoozed_until date"
+      side_effects:
+        - "Set snoozed_until"
+        - "Update status to snoozed"
+        - "Schedule unsnooze job"
+  
+  assignment:
+    assign_agent:
+      trigger: "Manual assignment OR auto-assignment"
+      validations:
+        - "Agent must belong to account"
+        - "Agent must have access to inbox"
+      side_effects:
+        - "Set assignee_id"
+        - "Set team_id (if applicable)"
+        - "Create assignment activity"
+        - "Trigger assignment webhook"
+        - "Send notification to agent"
+    
+    unassign:
+      trigger: "Agent unassigns conversation"
+      side_effects:
+        - "Clear assignee_id"
+        - "Clear team_id"
+        - "Create unassignment activity"
+        - "Update conversation stats"
+
+# API Endpoints
+apiEndpoints:
+  list:
+    path: "GET /api/v1/accounts/{account_id}/conversations"
+    params:
+      - status (open, resolved, pending, snoozed, all)
+      - assignee_type (me, unassigned, all)
+      - page
+    response: "Array of conversations with last message"
+  
+  show:
+    path: "GET /api/v1/accounts/{account_id}/conversations/{id}"
+    response: "Conversation with messages and metadata"
+  
+  toggle_status:
+    path: "POST /api/v1/accounts/{account_id}/conversations/{id}/toggle_status"
+    params:
+      - status (open, resolved, pending)
+    response: "Updated conversation"
+  
+  assign:
+    path: "POST /api/v1/accounts/{account_id}/conversations/{id}/assignments"
+    params:
+      - assignee_id
+      - team_id (optional)
+    response: "Updated conversation"
+  
+  snooze:
+    path: "POST /api/v1/accounts/{account_id}/conversations/{id}/snooze"
+    params:
+      - snoozed_until (datetime)
+    response: "Updated conversation"
+
+# Services
+services:
+  ConversationFinder:
+    purpose: "Find and filter conversations"
+    methods:
+      - perform (returns filtered conversations)
+    params:
+      - current_user
+      - params (status, assignee_type, team_id, labels, etc)
+  
+  AssignmentService:
+    purpose: "Handle conversation assignment"
+    methods:
+      - perform
+      - assign_agent
+      - update_team
+    params:
+      - conversation
+      - agent (optional)
+      - team (optional)
+
+# Events & Listeners
+events:
+  conversation_created:
+    listeners:
+      - NotificationListener
+      - WebhookListener
+      - ActivityListener
+  
+  conversation_resolved:
+    listeners:
+      - NotificationListener
+      - WebhookListener
+      - StatsListener
+  
+  conversation_opened:
+    listeners:
+      - NotificationListener
+      - WebhookListener
+      - StatsListener
+  
+  message_created:
+    listeners:
+      - NotificationListener
+      - WebhookListener
+      - ConversationListener (updates last_activity_at)
+
+# Testing Patterns
+testingPatterns:
+  model:
+    - "Test status transitions"
+    - "Test validations"
+    - "Test scopes"
+    - "Test associations"
+    - "Test callbacks"
+  
+  service:
+    - "Test happy path"
+    - "Test edge cases"
+    - "Test permissions"
+    - "Test side effects"
+  
+  api:
+    - "Test authentication"
+    - "Test authorization"
+    - "Test pagination"
+    - "Test filters"
+    - "Test response format"
+
+# Common Patterns
+patterns:
+  - name: "Status Toggle"
+    code: |
+      conversation.toggle_status
+      # OR
+      conversation.update!(status: :resolved)
+  
+  - name: "Assignment"
+    code: |
+      conversation.update!(assignee: agent, team: team)
+      # OR
+      AssignmentService.new(conversation: conversation, agent: agent).perform
+  
+  - name: "Snooze"
+    code: |
+      conversation.update!(
+        status: :snoozed,
+        snoozed_until: 2.hours.from_now
+      )
+      # Schedule unsnooze job
+      Conversations::UnsnoozeJob.set(wait_until: snoozed_until).perform_later(conversation)
+  
+  - name: "Create Message"
+    code: |
+      message = conversation.messages.create!(
+        content: "Hello",
+        message_type: :outgoing,
+        sender: current_user,
+        account: conversation.account
+      )
+
+# Best Practices
+bestPractices:
+  - "Always scope by account"
+  - "Use transactions for status changes with side effects"
+  - "Emit events for external integrations"
+  - "Update last_activity_at on every change"
+  - "Check permissions before assignment"
+  - "Handle race conditions in status changes"
+  - "Use background jobs for notifications"
+  - "Cache conversation counts"
+
+# Troubleshooting
+troubleshooting:
+  - issue: "Conversation not updating"
+    check:
+      - "Account scoping correct?"
+      - "Authorization passed?"
+      - "Validations passing?"
+  
+  - issue: "Messages not appearing"
+    check:
+      - "WebSocket connection active?"
+      - "Conversation ID correct?"
+      - "Message created successfully?"
+  
+  - issue: "Assignment not working"
+    check:
+      - "Agent belongs to account?"
+      - "Agent has inbox access?"
+      - "Team assignment valid?"

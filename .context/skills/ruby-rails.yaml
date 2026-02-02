@@ -1,0 +1,379 @@
+# Ruby on Rails Skill
+# Desenvolvimento backend com Ruby on Rails
+
+name: ruby-rails
+version: "1.0"
+category: backend
+description: "Expert Ruby on Rails development including models, controllers, services, jobs, and background processing"
+
+# Proficiency Levels
+proficiencyLevels:
+  beginner:
+    description: "Basic Rails knowledge"
+    capabilities:
+      - "Understand MVC pattern"
+      - "Create simple models with validations"
+      - "Write basic controllers"
+      - "Use ActiveRecord queries"
+      - "Run migrations"
+      - "Basic RSpec tests"
+  
+  advanced:
+    description: "Proficient Rails developer"
+    capabilities:
+      - "Design service objects"
+      - "Implement complex queries (joins, includes)"
+      - "Use concerns effectively"
+      - "Background jobs with Sidekiq"
+      - "API development"
+      - "Authentication & authorization"
+      - "Optimize N+1 queries"
+      - "Write comprehensive tests"
+  
+  expert:
+    description: "Rails architect"
+    capabilities:
+      - "Design application architecture"
+      - "Performance optimization"
+      - "Complex database design"
+      - "Advanced activerecord patterns"
+      - "Multi-tenancy implementation"
+      - "Event-driven architecture"
+      - "Cache strategies"
+      - "Security best practices"
+
+# Tools
+tools:
+  - name: RuboCop
+    purpose: "Ruby linter and code formatter"
+    commands:
+      - "bundle exec rubocop"
+      - "bundle exec rubocop -a"  # Auto-correct
+      - "bundle exec rubocop app/models/"
+  
+  - name: RSpec
+    purpose: "Testing framework"
+    commands:
+      - "bundle exec rspec"
+      - "bundle exec rspec spec/models/"
+      - "bundle exec rspec spec/services/my_service_spec.rb"
+      - "bundle exec rspec spec/services/my_service_spec.rb:42"
+  
+  - name: Rails Console
+    purpose: "Interactive Ruby/Rails environment"
+    commands:
+      - "bundle exec rails console"
+      - "bundle exec rails console --sandbox"
+  
+  - name: Rails Generate
+    purpose: "Code generators"
+    commands:
+      - "bundle exec rails g model ModelName"
+      - "bundle exec rails g migration AddFieldToModel field:type"
+      - "bundle exec rails g controller ControllerName"
+  
+  - name: Byebug
+    purpose: "Debugger"
+    usage: "Add 'byebug' in code to set breakpoint"
+  
+  - name: FactoryBot
+    purpose: "Test fixtures"
+    usage: "create(:model), build(:model), build_stubbed(:model)"
+
+# Patterns
+patterns:
+  - name: "Service Object"
+    description: "Encapsulate complex business logic"
+    proficiency: advanced
+    example: |
+      class MyService
+        def initialize(param1:, param2:)
+          @param1 = param1
+          @param2 = param2
+        end
+
+        def perform
+          # Business logic here
+          result
+        end
+
+        private
+
+        def helper_method
+          # Private helpers
+        end
+      end
+
+      # Usage:
+      service = MyService.new(param1: value1, param2: value2)
+      service.perform
+  
+  - name: "Background Job"
+    description: "Process tasks asynchronously"
+    proficiency: advanced
+    example: |
+      class MyJob < ApplicationJob
+        queue_as :default
+
+        def perform(*args)
+          # Job logic
+        end
+      end
+
+      # Usage:
+      MyJob.perform_later(arg1, arg2)
+      MyJob.set(wait: 5.minutes).perform_later(arg1)
+  
+  - name: "Model with JSONB"
+    description: "Flexible data storage"
+    proficiency: advanced
+    example: |
+      class MyModel < ApplicationRecord
+        store_accessor :additional_attributes, :field1, :field2
+        
+        # Or use jsonb_accessor gem
+        jsonb_accessor :additional_attributes,
+          field1: :string,
+          field2: [:integer, array: true]
+      end
+  
+  - name: "Scope Chaining"
+    description: "Composable queries"
+    proficiency: advanced
+    example: |
+      class Conversation < ApplicationRecord
+        scope :open, -> { where(status: :open) }
+        scope :unassigned, -> { where(assignee_id: nil) }
+        scope :by_team, ->(team) { where(team_id: team.id) }
+        
+        scope :assigned_to, lambda { |agent|
+          where(assignee_id: agent.id)
+        }
+      end
+
+      # Usage:
+      Conversation.open.unassigned
+      Conversation.open.by_team(team)
+  
+  - name: "Eager Loading"
+    description: "Prevent N+1 queries"
+    proficiency: advanced
+    example: |
+      # Bad (N+1)
+      conversations = Conversation.all
+      conversations.each { |c| puts c.contact.name }
+
+      # Good
+      conversations = Conversation.includes(:contact)
+      conversations.each { |c| puts c.contact.name }
+
+      # Multiple associations
+      Conversation.includes(:contact, :messages, :assignee)
+  
+  - name: "Multi-tenancy"
+    description: "Account-scoped queries"
+    proficiency: expert
+    example: |
+      class ApplicationRecord < ActiveRecord::Base
+        def self.account_scoped(account)
+          where(account_id: account.id)
+        end
+      end
+
+      # Usage:
+      Conversation.account_scoped(current_account)
+      
+      # In controllers:
+      Current.account.conversations.open
+  
+  - name: "Concerns"
+    description: "Shared code across models"
+    proficiency: advanced
+    example: |
+      # app/models/concerns/searchable.rb
+      module Searchable
+        extend ActiveSupport::Concern
+
+        included do
+          scope :search, ->(term) { where("name ILIKE ?", "%#{term}%") }
+        end
+
+        class_methods do
+          def search_fields(*fields)
+            @search_fields = fields
+          end
+        end
+      end
+
+      # Usage:
+      class Contact < ApplicationRecord
+        include Searchable
+        search_fields :name, :email
+      end
+
+# Best Practices
+bestPractices:
+  ruby:
+    - "Follow RuboCop rules (150 char line length)"
+    - "Use strong params in controllers"
+    - "Prefer keyword arguments over positional"
+    - "Use safe navigation (&.) for nil checks"
+    - "Prefer symbols over strings for keys"
+    - "Use || for default values, && for conditionals"
+  
+  rails:
+    - "Fat models, skinny controllers"
+    - "Extract complex logic to services"
+    - "Use concerns for shared code"
+    - "Background jobs for slow operations"
+    - "Eager loading (includes/joins) to avoid N+1"
+    - "Validations on models, not controllers"
+    - "Index frequently queried columns"
+    - "Use transactions for multi-step operations"
+  
+  activerecord:
+    - "Use scopes for common queries"
+    - "Prefer where.not over !=  "
+    - "Use pluck for arrays of single column"
+    - "Use exists? instead of present? for checks"
+    - "Use find_each for large datasets"
+    - "Counter cache for counts"
+  
+  testing:
+    - "Test behavior, not implementation"
+    - "Use factories, not fixtures"
+    - "One expectation per test (when possible)"
+    - "Use let for setup, before for side effects"
+    - "Test edge cases and error paths"
+    - "Mock external services"
+
+# Performance
+performance:
+  queries:
+    - "Use EXPLAIN to analyze queries"
+    - "Add indexes for WHERE, JOIN, ORDER BY columns"
+    - "Use select() to load only needed columns"
+    - "Prefer COUNT(*) over all.count"
+    - "Use exists? for boolean checks"
+  
+  caching:
+    - "Fragment caching in views"
+    - "Low-level caching with Rails.cache"
+    - "Counter caching for associations"
+    - "Memoization with ||= operator"
+    - "HTTP caching with ETags"
+  
+  background_jobs:
+    - "Async processing for emails"
+    - "Async for external API calls"
+    - "Bulk operations in background"
+    - "Use appropriate queue priorities"
+
+# Security
+security:
+  - "Always use strong parameters"
+  - "Protect from mass assignment"
+  - "Use parameterized queries (ActiveRecord does this)"
+  - "Validate and sanitize user input"
+  - "Use Pundit for authorization"
+  - "Secure sensitive data in credentials"
+  - "Enable CSRF protection"
+  - "Set proper CORS headers"
+
+# Debugging
+debugging:
+  commands:
+    - "byebug - Set breakpoint"
+    - "rails c - Console"
+    - "Rails.logger.debug - Logging"
+    - "pp object - Pretty print"
+  
+  tips:
+    - "Use byebug for step-by-step debugging"
+    - "Check logs/development.log"
+    - "Use rails console to test queries"
+    - "Use tap to debug chains"
+    - "Use ActiveRecord::Base.logger for SQL"
+
+# Commands Cheat Sheet
+commands:
+  setup:
+    - "bundle install"
+    - "bundle exec rails db:create"
+    - "bundle exec rails db:migrate"
+    - "bundle exec rails db:seed"
+  
+  run:
+    - "bundle exec rails server"
+    - "bundle exec rails s -p 3001"  # Different port
+  
+  console:
+    - "bundle exec rails console"
+    - "bundle exec rails c --sandbox"  # Rollback on exit
+  
+  database:
+    - "bundle exec rails db:migrate"
+    - "bundle exec rails db:rollback"
+    - "bundle exec rails db:migrate:redo"
+    - "bundle exec rails db:reset"  # Drop, create, migrate, seed
+  
+  generate:
+    - "bundle exec rails g model Name field:type"
+    - "bundle exec rails g migration AddFieldToModel field:type"
+    - "bundle exec rails g controller Name action1 action2"
+  
+  testing:
+    - "bundle exec rspec"
+    - "bundle exec rspec spec/models/"
+    - "bundle exec rspec spec/file_spec.rb"
+    - "bundle exec rspec spec/file_spec.rb:42"
+  
+  lint:
+    - "bundle exec rubocop"
+    - "bundle exec rubocop -a"  # Auto-correct
+    - "bundle exec rubocop --fail-level error"  # Ignore warnings
+
+# Documentation References
+documentation:
+  - path: "../docs/ARQUITETURA.md"
+    sections: ["Models", "Controllers", "Services", "Jobs"]
+  
+  - path: "../docs/MODELS.md"
+    sections: ["All models"]
+  
+  - path: "../docs/DEVELOPMENT.md"
+    sections: ["Setup", "Testing", "Migrations"]
+  
+  - path: "../docs/CHEATSHEET.md"
+    sections: ["Ruby Patterns", "Commands"]
+
+# Common Chatwoot Patterns
+chatwootPatterns:
+  - name: "Account Scoping"
+    example: |
+      # Always scope by account
+      Current.account.conversations.open
+      
+      # In services:
+      @account.contacts.find(params[:id])
+  
+  - name: "Event Dispatching"
+    example: |
+      # After creating/updating records
+      Rails.configuration.dispatcher.dispatch(
+        CONVERSATION_CREATED,
+        Time.zone.now,
+        conversation: conversation
+      )
+  
+  - name: "Pundit Authorization"
+    example: |
+      # In controller:
+      authorize @conversation
+      
+      # Policy class:
+      class ConversationPolicy < ApplicationPolicy
+        def show?
+          record.account == user.account
+        end
+      end

@@ -1,0 +1,472 @@
+# Testing Skill
+# Automated testing with RSpec and Vitest
+
+name: testing
+version: "1.0"
+category: quality-assurance
+description: "Comprehensive testing including unit, integration, and E2E tests with RSpec (Ruby) and Vitest (JavaScript/Vue)"
+
+proficiencyLevels:
+  beginner:
+    description: "Basic testing knowledge"
+    capabilities:
+      - "Write simple unit tests"
+      - "Use test assertions (expect)"
+      - "Run test suites"
+      - "Understand test structure (describe, it)"
+      - "Use factories for fixtures"
+  
+  advanced:
+    description: "Proficient test writer"
+    capabilities:
+      - "Write comprehensive test suites"
+      - "Integration tests"
+      - "Mock external dependencies"
+      - "Test edge cases and error paths"
+      - "Component testing (Vue)"
+      - "API testing"
+      - "Understand test coverage"
+  
+  expert:
+    description: "Testing architect"
+    capabilities:
+      - "Design testable architecture"
+      - "Test-driven development (TDD)"
+      - "E2E testing strategies"
+      - "Performance testing"
+      - "Test optimization"
+      - "CI/CD integration"
+      - "Coverage analysis and improvement"
+
+tools:
+  ruby:
+    - name: RSpec
+      purpose: "Ruby testing framework"
+      commands:
+        - "bundle exec rspec"
+        - "bundle exec rspec spec/models/"
+        - "bundle exec rspec spec/file_spec.rb"
+        - "bundle exec rspec spec/file_spec.rb:42"
+    
+    - name: FactoryBot
+      purpose: "Test fixtures"
+      usage: "create(:model), build(:model), build_stubbed(:model)"
+    
+    - name: SimpleCov
+      purpose: "Code coverage"
+      usage: "Automatic coverage reports after test runs"
+    
+    - name: WebMock
+      purpose: "HTTP request mocking"
+      usage: "stub_request(:get, url).to_return(body: '{}')"
+  
+  javascript:
+    - name: Vitest
+      purpose: "JavaScript testing framework"
+      commands:
+        - "pnpm test"
+        - "pnpm test:watch"
+        - "pnpm test Button.spec.js"
+    
+    - name: "@vue/test-utils"
+      purpose: "Vue component testing"
+      usage: "mount(Component, { props: {...} })"
+    
+    - name: "@testing-library/vue"
+      purpose: "User-centric testing utilities"
+      usage: "render(Component), screen.getByText('text')"
+
+patterns:
+  rspec:
+    model_test:
+      proficiency: beginner
+      example: |
+        require 'rails_helper'
+
+        RSpec.describe Conversation, type: :model do
+          describe 'associations' do
+            it { is_expected.to belong_to(:account) }
+            it { is_expected.to belong_to(:inbox) }
+            it { is_expected.to have_many(:messages) }
+          end
+
+          describe 'validations' do
+            it { is_expected.to validate_presence_of(:account_id) }
+            it { is_expected.to validate_presence_of(:inbox_id) }
+          end
+
+          describe 'enums' do
+            it { is_expected.to define_enum_for(:status) }
+          end
+
+          describe '#toggle_status' do
+            let(:conversation) { create(:conversation, status: :open) }
+
+            it 'toggles from open to resolved' do
+              conversation.toggle_status
+              expect(conversation.status).to eq('resolved')
+            end
+
+            context 'when already resolved' do
+              let(:conversation) { create(:conversation, status: :resolved) }
+
+              it 'toggles to open' do
+                conversation.toggle_status
+                expect(conversation.status).to eq('open')
+              end
+            end
+          end
+        end
+    
+    service_test:
+      proficiency: advanced
+      example: |
+        require 'rails_helper'
+
+        RSpec.describe ConversationFilterService do
+          describe '#perform' do
+            let(:account) { create(:account) }
+            let(:service) { described_class.new(account: account, filters: filters) }
+
+            context 'with status filter' do
+              let(:filters) { { status: 'open' } }
+              let!(:open_conv) { create(:conversation, account: account, status: :open) }
+              let!(:resolved_conv) { create(:conversation, account: account, status: :resolved) }
+
+              it 'returns only open conversations' do
+                result = service.perform
+                expect(result).to include(open_conv)
+                expect(result).not_to include(resolved_conv)
+              end
+            end
+
+            context 'with multiple filters' do
+              let(:team) { create(:team, account: account) }
+              let(:filters) { { status: 'open', team_id: team.id } }
+              let!(:matching_conv) do
+                create(:conversation, account: account, status: :open, team: team)
+              end
+              let!(:non_matching_conv) do
+                create(:conversation, account: account, status: :open, team: nil)
+              end
+
+              it 'applies all filters' do
+                result = service.perform
+                expect(result).to eq([matching_conv])
+              end
+            end
+
+            context 'with invalid filter' do
+              let(:filters) { { invalid: 'value' } }
+
+              it 'ignores invalid filters' do
+                expect { service.perform }.not_to raise_error
+              end
+            end
+          end
+        end
+    
+    controller_test:
+      proficiency: advanced
+      example: |
+        require 'rails_helper'
+
+        RSpec.describe 'Api::V1::Accounts::ConversationsController', type: :request do
+          let(:account) { create(:account) }
+          let(:user) { create(:user, account: account) }
+          let(:inbox) { create(:inbox, account: account) }
+          
+          before { sign_in(user) }
+
+          describe 'GET /api/v1/accounts/:account_id/conversations' do
+            let!(:conversations) { create_list(:conversation, 3, account: account, inbox: inbox) }
+
+            it 'returns success' do
+              get api_v1_account_conversations_path(account_id: account.id)
+              expect(response).to have_http_status(:success)
+            end
+
+            it 'returns conversations' do
+              get api_v1_account_conversations_path(account_id: account.id)
+              expect(response.parsed_body['payload'].size).to eq(3)
+            end
+
+            context 'with status filter' do
+              let!(:open_conv) { create(:conversation, account: account, inbox: inbox, status: :open) }
+              let!(:resolved_conv) { create(:conversation, account: account, inbox: inbox, status: :resolved) }
+
+              it 'filters by status' do
+                get api_v1_account_conversations_path(account_id: account.id, status: 'open')
+                
+                conversation_ids = response.parsed_body['payload'].map { |c| c['id'] }
+                expect(conversation_ids).to include(open_conv.id)
+                expect(conversation_ids).not_to include(resolved_conv.id)
+              end
+            end
+          end
+
+          describe 'POST /api/v1/accounts/:account_id/conversations/:id/toggle_status' do
+            let(:conversation) { create(:conversation, account: account, inbox: inbox, status: :open) }
+
+            it 'toggles conversation status' do
+              post toggle_status_api_v1_account_conversation_path(
+                account_id: account.id,
+                id: conversation.id
+              )
+
+              expect(response).to have_http_status(:success)
+              expect(conversation.reload.status).to eq('resolved')
+            end
+          end
+        end
+  
+  vitest:
+    component_test:
+      proficiency: advanced
+      example: |
+        import { describe, it, expect, vi } from 'vitest';
+        import { mount } from '@vue/test-utils';
+        import ConversationCard from './ConversationCard.vue';
+
+        describe('ConversationCard', () => {
+          const conversation = {
+            id: 1,
+            display_id: 123,
+            status: 'open',
+            contact: {
+              name: 'John Doe'
+            },
+            messages: [
+              { id: 1, content: 'Hello' }
+            ]
+          };
+
+          it('renders conversation details', () => {
+            const wrapper = mount(ConversationCard, {
+              props: { conversation }
+            });
+
+            expect(wrapper.text()).toContain('#123');
+            expect(wrapper.text()).toContain('John Doe');
+            expect(wrapper.text()).toContain('open');
+          });
+
+          it('emits toggle-status on button click', async () => {
+            const wrapper = mount(ConversationCard, {
+              props: { conversation }
+            });
+
+            const button = wrapper.find('[data-testid="toggle-button"]');
+            await button.trigger('click');
+
+            expect(wrapper.emitted('toggle-status')).toBeTruthy();
+            expect(wrapper.emitted('toggle-status')[0]).toEqual([1]);
+          });
+
+          it('shows loading state when loading prop is true', () => {
+            const wrapper = mount(ConversationCard, {
+              props: { conversation, loading: true }
+            });
+
+            expect(wrapper.find('[data-testid="spinner"]').exists()).toBe(true);
+          });
+
+          it('displays error message when error prop is set', () => {
+            const errorMessage = 'Failed to load';
+            const wrapper = mount(ConversationCard, {
+              props: { conversation, error: errorMessage }
+            });
+
+            expect(wrapper.text()).toContain(errorMessage);
+          });
+        });
+    
+    composable_test:
+      proficiency: advanced
+      example: |
+        import { describe, it, expect, beforeEach, vi } from 'vitest';
+        import { useConversation } from './useConversation';
+        import ConversationAPI from '@/api/conversations';
+
+        vi.mock('@/api/conversations');
+
+        describe('useConversation', () => {
+          beforeEach(() => {
+            vi.clearAllMocks();
+          });
+
+          it('fetches conversation successfully', async () => {
+            const mockConversation = { id: 1, status: 'open' };
+            ConversationAPI.show.mockResolvedValue({ data: mockConversation });
+
+            const { conversation, loading, fetchConversation } = useConversation(1);
+
+            await fetchConversation();
+
+            expect(loading.value).toBe(false);
+            expect(conversation.value).toEqual(mockConversation);
+          });
+
+          it('handles fetch error', async () => {
+            ConversationAPI.show.mockRejectedValue(new Error('Network error'));
+
+            const { error, fetchConversation } = useConversation(1);
+
+            await fetchConversation();
+
+            expect(error.value).toBe('Network error');
+          });
+
+          it('toggles conversation status', async () => {
+            const mockConversation = { id: 1, status: 'open' };
+            ConversationAPI.show.mockResolvedValue({ data: mockConversation });
+            ConversationAPI.toggleStatus.mockResolvedValue({ data: { ...mockConversation, status: 'resolved' } });
+
+            const { conversation, fetchConversation, toggleStatus } = useConversation(1);
+
+            await fetchConversation();
+            await toggleStatus();
+
+            expect(conversation.value.status).toBe('resolved');
+          });
+        });
+
+bestPractices:
+  general:
+    - "Test behavior, not implementation"
+    - "One logical assertion per test"
+    - "Descriptive test names (it 'does something when condition')"
+    - "Arrange, Act, Assert (AAA) pattern"
+    - "Test happy path first, then edge cases"
+    - "Test error paths and exceptions"
+    - "Keep tests fast and isolated"
+    - "Don't test framework code"
+    - "Mock external dependencies"
+  
+  rspec:
+    - "Use let for setup, before for side effects"
+    - "Use subject when appropriate"
+    - "Use contexts for different scenarios"
+    - "Use shared examples for repeated patterns"
+    - "Use FactoryBot, not fixtures"
+    - "One factory per model"
+    - "Traits for variations"
+    - "Use create for persisted, build for unsaved"
+  
+  vitest:
+    - "Use describe for grouping"
+    - "Use it for individual tests"
+    - "Mock external dependencies with vi.mock()"
+    - "Clear mocks between tests"
+    - "Test user interactions (clicks, inputs)"
+    - "Test props and emits"
+    - "Use data-testid for selectors"
+    - "Avoid testing implementation details"
+
+# Factory Patterns
+factories:
+  example: |
+    # spec/factories/conversations.rb
+    FactoryBot.define do
+      factory :conversation do
+        association :account
+        association :inbox
+        association :contact
+        
+        status { :open }
+        display_id { rand(1000..9999) }
+        
+        trait :resolved do
+          status { :resolved }
+        end
+        
+        trait :with_messages do
+          after(:create) do |conversation|
+            create_list(:message, 3, conversation: conversation)
+          end
+        end
+        
+        trait :assigned do
+          association :assignee, factory: :user
+          association :team
+        end
+      end
+    end
+
+    # Usage:
+    create(:conversation)
+    create(:conversation, :resolved)
+    create(:conversation, :with_messages)
+    create(:conversation, :resolved, :assigned)
+
+# Mocking
+mocking:
+  rspec:
+    - name: "WebMock for HTTP"
+      example: |
+        require 'webmock/rspec'
+
+        stub_request(:post, "https://api.whatsapp.com/send")
+          .with(
+            body: hash_including({ message: "Hello" }),
+            headers: { 'Authorization' => 'Bearer token' }
+          )
+          .to_return(
+            status: 200,
+            body: { message_id: '123' }.to_json,
+            headers: { 'Content-Type' => 'application/json' }
+          )
+    
+    - name: "Double/Mock"
+      example: |
+        # Double
+        user = double('User', name: 'John', email: 'john@example.com')
+
+        # Mock method
+        allow(service).to receive(:perform).and_return(result)
+
+        # Spy
+        allow(service).to receive(:perform)
+        service.perform
+        expect(service).to have_received(:perform)
+  
+  vitest:
+    - name: "Mock Module"
+      example: |
+        import { vi } from 'vitest';
+        import ConversationAPI from '@/api/conversations';
+
+        vi.mock('@/api/conversations');
+
+        ConversationAPI.get.mockResolvedValue({ data: [] });
+    
+    - name: "Mock Function"
+      example: |
+        const mockFn = vi.fn();
+        mockFn.mockReturnValue('result');
+        mockFn.mockResolvedValue(Promise.resolve('async result'));
+
+        expect(mockFn).toHaveBeenCalled();
+        expect(mockFn).toHaveBeenCalledWith('arg');
+
+commands:
+  rspec:
+    - "bundle exec rspec"
+    - "bundle exec rspec spec/models/"
+    - "bundle exec rspec spec/file_spec.rb"
+    - "bundle exec rspec spec/file_spec.rb:42"
+    - "bundle exec rspec --format documentation"
+    - "bundle exec rspec --tag focus"
+  
+  vitest:
+    - "pnpm test"
+    - "pnpm test:watch"
+    - "pnpm test File.spec.js"
+    - "pnpm test --coverage"
+
+documentation:
+  - path: "../docs/DEVELOPMENT.md"
+    sections: ["Testing"]
+  
+  - path: "../docs/CHEATSHEET.md"
+    sections: ["Testing", "Factory Patterns"]

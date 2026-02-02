@@ -1,0 +1,221 @@
+# Chatwoot Agents Manifest
+# Configuração central de todos os agents disponíveis no projeto
+
+version: "1.0"
+project: chatwoot
+updated: 2026-02-02
+
+# Built-in Agents do AI-Context
+# Estes agents já estão disponíveis automaticamente
+builtInAgents:
+  - code-reviewer
+  - bug-fixer
+  - feature-developer
+  - refactoring-specialist
+  - test-writer
+  - documentation-writer
+  - performance-optimizer
+  - security-auditor
+  - backend-specialist
+  - frontend-specialist
+  - architect-specialist
+  - devops-specialist
+  - database-specialist
+  - mobile-specialist
+
+# Custom Agents para Chatwoot
+# Agents especializados no domínio do projeto
+customAgents:
+  - name: chatwoot-specialist
+    type: domain-expert
+    description: "Expert geral em toda a arquitetura e domínio do Chatwoot"
+    enabled: true
+    config: ./chatwoot-specialist.yaml
+    skills:
+      - ruby-rails
+      - vue-frontend
+      - api-development
+      - testing
+    primaryDocumentation:
+      - ../docs/ARQUITETURA.md
+      - ../docs/MODELS.md
+      - ../docs/API.md
+    phases: ["P", "R", "E", "V", "C"]
+
+  - name: conversation-specialist
+    type: feature-expert
+    description: "Especialista no core do sistema - conversas e mensagens"
+    enabled: true
+    config: ./conversation-specialist.yaml
+    skills:
+      - ruby-rails
+      - api-development
+      - testing
+    primaryDocumentation:
+      - ../docs/MODELS.md#conversation
+      - ../docs/MODELS.md#message
+      - ../docs/API.md#conversas
+    phases: ["P", "R", "E", "V"]
+
+  - name: channel-specialist
+    type: integration-expert
+    description: "Especialista em integrações de canais de comunicação"
+    enabled: true
+    config: ./channel-specialist.yaml
+    skills:
+      - ruby-rails
+      - api-development
+      - webhooks
+    primaryDocumentation:
+      - ../docs/ARQUITETURA.md#integrações-com-canais
+      - ../docs/API.md#inboxes
+    phases: ["P", "R", "E", "V"]
+
+# Mapping de Roles para Agents
+# Define quais agents são acionados para cada role
+roleMapping:
+  architect:
+    primary: architect-specialist
+    secondary:
+      - chatwoot-specialist
+      - backend-specialist
+  
+  developer:
+    primary: feature-developer
+    secondary:
+      - backend-specialist
+      - frontend-specialist
+      - chatwoot-specialist
+  
+  reviewer:
+    primary: code-reviewer
+    secondary:
+      - security-auditor
+      - performance-optimizer
+  
+  qa:
+    primary: test-writer
+    secondary:
+      - performance-optimizer
+      - security-auditor
+  
+  documenter:
+    primary: documentation-writer
+    secondary:
+      - chatwoot-specialist
+
+# Mapping de Tasks para Agents
+# Orquestração automática baseada em keywords
+taskMapping:
+  conversations:
+    - conversation-specialist
+    - backend-specialist
+    - test-writer
+  
+  channels:
+    - channel-specialist
+    - backend-specialist
+    - test-writer
+  
+  api:
+    - backend-specialist
+    - api-development
+    - security-auditor
+  
+  ui:
+    - frontend-specialist
+    - vue-frontend
+    - test-writer
+  
+  performance:
+    - performance-optimizer
+    - database-specialist
+    - backend-specialist
+  
+  security:
+    - security-auditor
+    - backend-specialist
+    - code-reviewer
+
+# Workflow PREVC Configuration
+prevcConfig:
+  # Planning Phase
+  planning:
+    requiredAgents:
+      - architect-specialist
+    recommendedAgents:
+      - chatwoot-specialist
+      - documentation-writer
+    requirePlan: true
+    requireApproval: false
+  
+  # Review Phase
+  review:
+    requiredAgents:
+      - code-reviewer
+    recommendedAgents:
+      - architect-specialist
+      - security-auditor
+    requirePlan: true
+    requireApproval: true
+  
+  # Execution Phase
+  execution:
+    requiredAgents:
+      - feature-developer
+    recommendedAgents:
+      - backend-specialist
+      - frontend-specialist
+      - database-specialist
+    requirePlan: true
+    requireApproval: false
+  
+  # Validation Phase
+  validation:
+    requiredAgents:
+      - test-writer
+    recommendedAgents:
+      - performance-optimizer
+      - security-auditor
+      - code-reviewer
+    requirePlan: false
+    requireApproval: false
+  
+  # Complete Phase
+  complete:
+    requiredAgents:
+      - documentation-writer
+    recommendedAgents:
+      - devops-specialist
+    requirePlan: false
+    requireApproval: false
+
+# Gates Configuration
+gates:
+  planningToReview:
+    enabled: true
+    require: plan
+    message: "Plan must be created and documented before review"
+  
+  reviewToExecution:
+    enabled: true
+    require: approval
+    message: "Design must be approved before implementation"
+  
+  executionToValidation:
+    enabled: false
+    require: build
+    message: "Build must pass before validation"
+  
+  validationToComplete:
+    enabled: false
+    require: tests
+    message: "Tests must pass before completion"
+
+# Autonomous Mode
+# Quando ativado, bypassa gates automaticamente
+autonomous:
+  enabled: false
+  bypassGates: false
+  autoApprove: false
+  reason: null

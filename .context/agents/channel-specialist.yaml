@@ -1,0 +1,452 @@
+# Channel Specialist Agent
+# Especialista em integrações de canais de comunicação
+
+name: channel-specialist
+type: integration-expert
+version: "1.0"
+enabled: true
+
+metadata:
+  description: "Especialista em integrações de canais de comunicação"
+  author: "Chatwoot Team"
+  created: "2026-02-02"
+  focus: "Channel integrations and webhooks"
+  domain: "External platform integrations"
+
+expertise:
+  - Channel::WebWidget
+  - Channel::Api
+  - Channel::Email
+  - Channel::FacebookPage
+  - Channel::TwitterProfile
+  - Channel::TwilioSms
+  - Channel::Whatsapp
+  - Channel::Telegram
+  - Channel::Line
+  - Channel::Sms
+  - Webhook processing
+  - OAuth flows
+  - Message synchronization
+
+skills:
+  - id: ruby-rails
+    proficiency: expert
+    focus: ["Channels", "Webhooks", "API Integrations"]
+  
+  - id: api-development
+    proficiency: expert
+    focus: ["External APIs", "Webhooks", "OAuth"]
+  
+  - id: testing
+    proficiency: advanced
+    focus: ["Integration tests", "Webhook mocking"]
+
+primaryDocumentation:
+  - path: ../docs/ARQUITETURA.md
+    sections: ["Integrações com Canais"]
+    weight: 1.0
+  
+  - path: ../docs/MODELS.md
+    sections: ["Inbox", "Channel"]
+    weight: 0.9
+  
+  - path: ../docs/API.md
+    sections: ["Inboxes", "Webhooks"]
+    weight: 0.8
+
+phases:
+  planning:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Design channel integration architecture"
+      - "Plan webhook handling"
+      - "Design OAuth flows"
+  
+  review:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Review integration security"
+      - "Validate webhook handling"
+      - "Check rate limiting"
+  
+  execution:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Implement channel integrations"
+      - "Build webhook handlers"
+      - "Create OAuth flows"
+  
+  validation:
+    enabled: true
+    priority: high
+    capabilities:
+      - "Test integrations"
+      - "Validate webhook processing"
+      - "Test error handling"
+
+# Channel Architecture
+channelArchitecture:
+  base:
+    model: "ApplicationRecord"
+    namespace: "Channel::"
+    polymorphic: "channelable (Inbox)"
+  
+  directory: "app/models/channel/"
+  
+  pattern: |
+    # All channels follow this structure:
+    class Channel::MyChannel < ApplicationRecord
+      self.table_name = 'channel_my_channels'
+      
+      belongs_to :account
+      has_one :inbox, as: :channel, dependent: :destroy
+      
+      validates :some_token, presence: true
+      
+      def name
+        'MyChannel'
+      end
+      
+      def messaging_window_enabled?
+        # Platform-specific
+      end
+      
+      def send_message(message)
+        # Platform-specific API call
+      end
+    end
+
+# Supported Channels
+channels:
+  web_widget:
+    class: "Channel::WebWidget"
+    table: "channel_web_widgets"
+    features:
+      - "Live chat on website"
+      - "Pre-chat form"
+      - "HMAC verification"
+      - "Customizable widget"
+    configuration:
+      - website_url
+      - widget_color
+      - welcome_title
+      - welcome_tagline
+      - hmac_token
+  
+  api:
+    class: "Channel::Api"
+    table: "channel_api"
+    features:
+      - "Programmatic message sending"
+      - "Webhook support"
+      - "HMAC verification"
+    configuration:
+      - webhook_url
+      - hmac_token
+      - identifier (UUID)
+  
+  email:
+    class: "Channel::Email"
+    table: "channel_email"
+    features:
+      - "Email support"
+      - "IMAP integration"
+      - "SMTP sending"
+      - "Email threading"
+    configuration:
+      - email
+      - imap_enabled
+      - imap_address
+      - imap_port
+      - smtp_address
+      - smtp_port
+  
+  facebook_page:
+    class: "Channel::FacebookPage"
+    table: "channel_facebook_pages"
+    features:
+      - "Facebook Messenger"
+      - "Instagram DMs"
+      - "24h messaging window"
+      - "Templates outside window"
+    configuration:
+      - page_id
+      - page_access_token
+      - user_access_token
+    oauth: true
+  
+  whatsapp:
+    class: "Channel::Whatsapp"
+    table: "channel_whatsapp"
+    features:
+      - "WhatsApp Business API"
+      - "24h messaging window"
+      - "Template messages"
+      - "Media support"
+    configuration:
+      - phone_number
+      - provider (twilio, 360dialog, etc)
+      - provider_config (jsonb)
+  
+  twilio_sms:
+    class: "Channel::TwilioSms"
+    table: "channel_twilio_sms"
+    features:
+      - "SMS via Twilio"
+      - "MMS support"
+      - "Phone number validation"
+    configuration:
+      - phone_number
+      - account_sid
+      - auth_token
+      - messaging_service_sid
+  
+  twitter:
+    class: "Channel::TwitterProfile"
+    table: "channel_twitter_profiles"
+    features:
+      - "Twitter DMs"
+      - "Tweet mentions"
+    configuration:
+      - profile_id
+      - twitter_access_token
+      - twitter_access_token_secret
+    oauth: true
+  
+  telegram:
+    class: "Channel::Telegram"
+    table: "channel_telegram"
+    features:
+      - "Telegram bot"
+      - "Rich messages"
+    configuration:
+      - bot_token
+      - bot_name
+  
+  line:
+    class: "Channel::Line"
+    table: "channel_line"
+    features:
+      - "LINE messaging"
+      - "Japanese market"
+    configuration:
+      - line_channel_id
+      - line_channel_secret
+      - line_channel_token
+
+# Inbox Model
+inboxModel:
+  polymorphic_association:
+    name: "channel"
+    types: "All Channel:: models"
+  
+  attributes:
+    - name
+    - channel_type
+    - channel_id
+    - account_id
+    - greeting_enabled
+    - greeting_message
+    - working_hours_enabled
+    - out_of_office_message
+    - enable_auto_assignment
+    - allow_messages_after_resolved
+  
+  methods:
+    - inbox_members
+    - add_member(user, role)
+    - remove_member(user)
+    - assignable_agents
+
+# Webhook Processing
+webhookProcessing:
+  flow: |
+    1. Webhook received at controller
+    2. Validate signature/token
+    3. Parse payload
+    4. Find or create contact
+    5. Find or create conversation
+    6. Create message
+    7. Trigger events
+    8. Return 200 OK (fast!)
+  
+  controllers:
+    - app/controllers/webhooks/facebook_controller.rb
+    - app/controllers/webhooks/twitter_controller.rb
+    - app/controllers/webhooks/whatsapp_controller.rb
+    - app/controllers/webhooks/telegram_controller.rb
+  
+  pattern: |
+    class Webhooks::MyChannelController < ActionController::API
+      before_action :verify_signature
+      
+      def process_payload
+        # Parse payload
+        # Process in background job if needed
+        head :ok
+      end
+      
+      private
+      
+      def verify_signature
+        # Validate webhook signature
+      end
+    end
+  
+  jobs:
+    - Webhooks::FacebookEventsJob
+    - Webhooks::WhatsappEventsJob
+    - Webhooks::TelegramEventsJob
+
+# Message Sending
+messageSending:
+  pattern: |
+    # In channel model:
+    def send_message(message)
+      # Call external API
+      response = http_client.post(
+        api_url,
+        headers: auth_headers,
+        body: message_payload(message).to_json
+      )
+      
+      # Update message with external_id
+      message.update!(source_id: response['message_id'])
+    end
+  
+  error_handling: |
+    rescue HTTPClient::Error => e
+      # Log error
+      Rails.logger.error "Failed to send message: #{e.message}"
+      
+      # Update message status
+      message.update!(status: :failed)
+      
+      # Notify sentry
+      ChatwootExceptionTracker.new(e, account: message.account).capture_exception
+  
+  rate_limiting:
+    - "Respect platform rate limits"
+    - "Implement exponential backoff"
+    - "Queue messages if needed"
+    - "Handle 429 responses"
+
+# OAuth Flows
+oauthFlows:
+  facebook:
+    steps:
+      - "Redirect to Facebook OAuth"
+      - "User grants permissions"
+      - "Receive callback with short-lived token"
+      - "Exchange for long-lived token"
+      - "Store securely"
+    permissions:
+      - pages_messaging
+      - pages_manage_metadata
+      - instagram_basic
+      - instagram_manage_messages
+  
+  twitter:
+    steps:
+      - "Request token from Twitter"
+      - "Redirect user to authorize"
+      - "Receive callback with verifier"
+      - "Exchange for access token"
+      - "Store securely"
+    scopes:
+      - dm.read
+      - dm.write
+      - tweet.read
+
+# Testing Patterns
+testingPatterns:
+  webhook:
+    - "Mock external API calls with WebMock"
+    - "Test signature validation"
+    - "Test payload parsing"
+    - "Test contact/conversation creation"
+    - "Test message creation"
+  
+  integration:
+    - "Mock OAuth flows"
+    - "Test message sending"
+    - "Test error handling"
+    - "Test rate limiting"
+  
+  example: |
+    RSpec.describe Webhooks::WhatsappController do
+      describe 'POST #process_payload' do
+        before do
+          stub_request(:post, whatsapp_api_url)
+            .to_return(status: 200, body: { success: true }.to_json)
+        end
+        
+        it 'creates a message' do
+          expect {
+            post :process_payload, params: valid_payload
+          }.to change { Message.count }.by(1)
+        end
+      end
+    end
+
+# Best Practices
+bestPractices:
+  - "Always validate webhook signatures"
+  - "Process webhooks asynchronously (background jobs)"
+  - "Return 200 OK quickly from webhook endpoints"
+  - "Store external_id (source_id) on messages"
+  - "Handle messaging windows (Facebook, WhatsApp)"
+  - "Respect rate limits"
+  - "Implement exponential backoff"
+  - "Encrypt sensitive tokens"
+  - "Handle token expiration gracefully"
+  - "Log all external API calls"
+  - "Monitor for failed deliveries"
+
+# Common Issues
+troubleshooting:
+  - issue: "Webhook not receiving messages"
+    check:
+      - "Webhook URL configured correctly?"
+      - "Signature validation working?"
+      - "Firewall blocking requests?"
+      - "HTTPS enabled?"
+  
+  - issue: "Messages not sending"
+    check:
+      - "Token still valid?"
+      - "Rate limit exceeded?"
+      - "API credentials correct?"
+      - "Message format valid?"
+  
+  - issue: "OAuth failing"
+    check:
+      - "Redirect URI matches exactly?"
+      - "App permissions correct?"
+      - "Tokens being stored?"
+      - "Token exchange working?"
+
+# External APIs
+externalApis:
+  facebook:
+    base_url: "https://graph.facebook.com/v18.0"
+    docs: "https://developers.facebook.com/docs/messenger-platform"
+    auth: "Bearer token"
+  
+  whatsapp:
+    base_url: "Varies by provider"
+    docs: "https://developers.facebook.com/docs/whatsapp"
+    auth: "Varies by provider"
+  
+  twilio:
+    base_url: "https://api.twilio.com/2010-04-01"
+    docs: "https://www.twilio.com/docs/sms"
+    auth: "Basic auth"
+  
+  telegram:
+    base_url: "https://api.telegram.org/bot{token}"
+    docs: "https://core.telegram.org/bots/api"
+    auth: "Token in URL"

@@ -1,0 +1,711 @@
+# API Development Skill
+# Expert em desenvolvimento de REST APIs, integrações e webhooks
+
+name: api-development
+version: "1.0"
+category: backend
+enabled: true
+
+metadata:
+  description: "Skills para desenvolvimento de REST APIs, integrations e webhooks"
+  author: "Chatwoot Team"
+  created: "2026-02-02"
+  updated: "2026-02-02"
+  tags:
+    - api
+    - rest
+    - webhooks
+    - integrations
+    - oauth
+
+# Proficiency Levels
+proficiencyLevels:
+  beginner:
+    description: "Basic REST API concepts and simple endpoints"
+    capabilities:
+      - Understand HTTP methods (GET, POST, PUT, DELETE)
+      - Create simple CRUD endpoints
+      - Basic JSON serialization
+      - Handle request parameters
+      - Return proper HTTP status codes
+      - Basic authentication
+    
+  advanced:
+    description: "Complex APIs, integrations and webhooks"
+    capabilities:
+      - Design RESTful APIs
+      - API versioning
+      - Pagination and filtering
+      - Rate limiting
+      - Webhook processing
+      - OAuth2 flows
+      - External API integrations
+      - Error handling and validation
+      - API documentation (Swagger/OpenAPI)
+      - Request/response transformations
+    
+  expert:
+    description: "API architecture, security and performance"
+    capabilities:
+      - API architecture design
+      - Security best practices (CSRF, XSS, injection)
+      - Performance optimization (N+1, caching, eager loading)
+      - API monitoring and analytics
+      - Async/background processing for APIs
+      - Circuit breakers and retry logic
+      - Multi-tenancy in APIs
+      - Webhook delivery guarantees
+      - API testing strategies
+      - GraphQL (optional)
+
+# Tools
+tools:
+  development:
+    - name: Rails Routing
+      usage: "config/routes.rb"
+      purpose: "Define API endpoints"
+    
+    - name: Controllers
+      usage: "app/controllers/api/v1/"
+      purpose: "Handle API requests"
+    
+    - name: Serializers/Blueprints
+      usage: "ActiveModel::Serializers or Blueprinter"
+      purpose: "Structure JSON responses"
+    
+    - name: Strong Parameters
+      usage: "params.require().permit()"
+      purpose: "Whitelist parameters"
+  
+  testing:
+    - name: RSpec Request Specs
+      command: "bundle exec rspec spec/requests/"
+      purpose: "Test API endpoints"
+    
+    - name: WebMock
+      usage: "WebMock.stub_request"
+      purpose: "Mock external APIs"
+    
+    - name: VCR
+      usage: "VCR.use_cassette"
+      purpose: "Record/replay HTTP interactions"
+  
+  documentation:
+    - name: Swagger/OpenAPI
+      files: "swagger/swagger.yaml"
+      purpose: "API specification"
+    
+    - name: Postman Collections
+      purpose: "API testing and documentation"
+  
+  monitoring:
+    - name: API Analytics
+      purpose: "Track API usage, response times"
+    
+    - name: Error Tracking
+      purpose: "Monitor API errors (Sentry, etc)"
+
+# Patterns
+patterns:
+  restful_controller:
+    description: "Standard REST controller with JSON responses"
+    example: |
+      # app/controllers/api/v1/conversations_controller.rb
+      class Api::V1::ConversationsController < Api::V1::BaseController
+        before_action :set_conversation, only: [:show, :update, :destroy]
+        before_action :authorize_conversation, only: [:update, :destroy]
+        
+        def index
+          @conversations = Current.account
+            .conversations
+            .includes(:assignee, :contact, :inbox)
+            .page(params[:page])
+            .per(params[:per_page] || 25)
+          
+          render json: @conversations, 
+                 meta: pagination_meta(@conversations)
+        end
+        
+        def show
+          render json: @conversation,
+                 include: [:messages, :assignee, :contact]
+        end
+        
+        def create
+          @conversation = Current.account.conversations.build(conversation_params)
+          
+          if @conversation.save
+            render json: @conversation, status: :created
+          else
+            render json: { errors: @conversation.errors },
+                   status: :unprocessable_entity
+          end
+        end
+        
+        def update
+          if @conversation.update(conversation_params)
+            render json: @conversation
+          else
+            render json: { errors: @conversation.errors },
+                   status: :unprocessable_entity
+          end
+        end
+        
+        def destroy
+          @conversation.destroy
+          head :no_content
+        end
+        
+        private
+        
+        def set_conversation
+          @conversation = Current.account.conversations.find(params[:id])
+        rescue ActiveRecord::RecordNotFound
+          render json: { error: 'Conversation not found' },
+                 status: :not_found
+        end
+        
+        def authorize_conversation
+          authorize @conversation
+        end
+        
+        def conversation_params
+          params.require(:conversation).permit(
+            :inbox_id, :contact_id, :assignee_id,
+            :status, :priority, :additional_attributes
+          )
+        end
+        
+        def pagination_meta(collection)
+          {
+            current_page: collection.current_page,
+            next_page: collection.next_page,
+            prev_page: collection.prev_page,
+            total_pages: collection.total_pages,
+            total_count: collection.total_count
+          }
+        end
+      end
+  
+  api_versioning:
+    description: "API versioning structure"
+    structure: |
+      app/controllers/api/
+      ├── base_controller.rb          # Common API logic
+      ├── v1/
+      │   ├── base_controller.rb      # V1 base
+      │   ├── conversations_controller.rb
+      │   └── messages_controller.rb
+      └── v2/
+          ├── base_controller.rb      # V2 base
+          └── conversations_controller.rb
+    
+    routes: |
+      # config/routes.rb
+      namespace :api do
+        namespace :v1 do
+          resources :conversations
+          resources :messages
+        end
+        
+        namespace :v2 do
+          resources :conversations
+        end
+      end
+  
+  webhook_processing:
+    description: "Process incoming webhooks from external services"
+    example: |
+      # app/controllers/webhooks/facebook_controller.rb
+      class Webhooks::FacebookController < ApplicationController
+        skip_before_action :verify_authenticity_token
+        before_action :verify_signature
+        
+        def create
+          process_webhook_events(webhook_params)
+          head :ok
+        end
+        
+        private
+        
+        def verify_signature
+          signature = request.headers['X-Hub-Signature-256']
+          expected = compute_signature(request.raw_post)
+          
+          unless ActiveSupport::SecurityUtils.secure_compare(signature, expected)
+            render json: { error: 'Invalid signature' }, status: :unauthorized
+          end
+        end
+        
+        def compute_signature(payload)
+          secret = ENV['FACEBOOK_APP_SECRET']
+          'sha256=' + OpenSSL::HMAC.hexdigest('SHA256', secret, payload)
+        end
+        
+        def process_webhook_events(params)
+          params[:entry]&.each do |entry|
+            entry[:messaging]&.each do |messaging_event|
+              Webhooks::FacebookEventsJob.perform_later(
+                account_id: find_account_id(entry[:id]),
+                event: messaging_event
+              )
+            end
+          end
+        end
+        
+        def webhook_params
+          params.permit!
+        end
+      end
+  
+  external_api_integration:
+    description: "Call external APIs with error handling"
+    example: |
+      # app/services/facebook/send_message_service.rb
+      class Facebook::SendMessageService
+        include HTTParty
+        base_uri 'https://graph.facebook.com/v18.0'
+        
+        def initialize(page_access_token)
+          @token = page_access_token
+        end
+        
+        def send_text(recipient_id, text)
+          response = self.class.post(
+            "/me/messages",
+            query: { access_token: @token },
+            body: {
+              recipient: { id: recipient_id },
+              message: { text: text }
+            }.to_json,
+            headers: { 'Content-Type' => 'application/json' },
+            timeout: 10
+          )
+          
+          handle_response(response)
+        end
+        
+        private
+        
+        def handle_response(response)
+          case response.code
+          when 200
+            { success: true, data: response.parsed_response }
+          when 400
+            { success: false, error: 'Bad request', details: response.parsed_response }
+          when 401
+            { success: false, error: 'Invalid token' }
+          when 429
+            { success: false, error: 'Rate limited', retry_after: response.headers['Retry-After'] }
+          when 500..599
+            { success: false, error: 'Facebook API error' }
+          else
+            { success: false, error: 'Unknown error', code: response.code }
+          end
+        rescue Net::OpenTimeout, Net::ReadTimeout => e
+          { success: false, error: 'Timeout', exception: e.message }
+        rescue StandardError => e
+          { success: false, error: 'Exception', exception: e.message }
+        end
+      end
+  
+  oauth2_flow:
+    description: "OAuth2 authentication flow"
+    example: |
+      # app/controllers/auth/facebook_controller.rb
+      class Auth::FacebookController < ApplicationController
+        def authorize
+          redirect_to facebook_auth_url, allow_other_host: true
+        end
+        
+        def callback
+          token_response = exchange_code_for_token(params[:code])
+          
+          if token_response[:access_token]
+            user_info = fetch_user_info(token_response[:access_token])
+            
+            # Create or update channel
+            channel = create_facebook_channel(
+              user_info: user_info,
+              access_token: token_response[:access_token]
+            )
+            
+            redirect_to dashboard_path, notice: 'Facebook connected!'
+          else
+            redirect_to settings_path, alert: 'Authentication failed'
+          end
+        end
+        
+        private
+        
+        def facebook_auth_url
+          params = {
+            client_id: ENV['FACEBOOK_APP_ID'],
+            redirect_uri: callback_auth_facebook_url,
+            scope: 'pages_messaging,pages_manage_metadata',
+            response_type: 'code'
+          }
+          
+          "https://www.facebook.com/v18.0/dialog/oauth?#{params.to_query}"
+        end
+        
+        def exchange_code_for_token(code)
+          response = HTTParty.get(
+            'https://graph.facebook.com/v18.0/oauth/access_token',
+            query: {
+              client_id: ENV['FACEBOOK_APP_ID'],
+              client_secret: ENV['FACEBOOK_APP_SECRET'],
+              redirect_uri: callback_auth_facebook_url,
+              code: code
+            }
+          )
+          
+          response.parsed_response.symbolize_keys
+        end
+        
+        def fetch_user_info(token)
+          response = HTTParty.get(
+            'https://graph.facebook.com/v18.0/me',
+            query: { 
+              access_token: token,
+              fields: 'id,name,email'
+            }
+          )
+          
+          response.parsed_response.symbolize_keys
+        end
+      end
+  
+  serializer_pattern:
+    description: "Structure JSON responses consistently"
+    example: |
+      # app/blueprints/conversation_blueprint.rb
+      class ConversationBlueprint < Blueprinter::Base
+        identifier :id
+        
+        fields :status, :priority, :created_at, :updated_at
+        
+        field :display_id do |conversation|
+          "##{conversation.display_id}"
+        end
+        
+        association :inbox, blueprint: InboxBlueprint
+        association :contact, blueprint: ContactBlueprint
+        association :assignee, blueprint: UserBlueprint
+        
+        view :extended do
+          association :messages, blueprint: MessageBlueprint
+          association :labels, blueprint: LabelBlueprint
+          
+          field :unread_count do |conversation|
+            conversation.unread_incoming_messages.count
+          end
+        end
+      end
+      
+      # Usage:
+      # ConversationBlueprint.render(@conversation)
+      # ConversationBlueprint.render(@conversation, view: :extended)
+
+# Best Practices
+bestPractices:
+  general:
+    - "Use proper HTTP status codes (200, 201, 400, 401, 404, 422, 500)"
+    - "Always validate and sanitize inputs"
+    - "Return consistent JSON structure"
+    - "Include proper error messages"
+    - "Use pagination for list endpoints"
+    - "Implement rate limiting"
+    - "Version your APIs properly"
+    - "Document all endpoints"
+  
+  rails_api:
+    - "Use namespace for API controllers (Api::V1::)"
+    - "Inherit from Api::BaseController for shared logic"
+    - "Use strong parameters for input whitelisting"
+    - "Use serializers/blueprints for response formatting"
+    - "Eager load associations to avoid N+1"
+    - "Use jbuilder or blueprinter for JSON"
+    - "Scope queries by Current.account for multi-tenancy"
+  
+  security:
+    - "Verify webhook signatures"
+    - "Use HTTPS only"
+    - "Implement CORS properly"
+    - "Rate limit public endpoints"
+    - "Sanitize all user inputs"
+    - "Use CSRF tokens for state-changing operations"
+    - "Don't expose sensitive data in errors"
+    - "Log security events"
+  
+  performance:
+    - "Cache responses when appropriate"
+    - "Use background jobs for slow operations"
+    - "Paginate large datasets"
+    - "Eager load associations (includes, preload)"
+    - "Use database indexes"
+    - "Monitor API response times"
+    - "Implement request timeouts"
+  
+  error_handling:
+    - "Rescue all exceptions in base controller"
+    - "Return structured error responses"
+    - "Log errors with context"
+    - "Don't expose stack traces in production"
+    - "Handle rate limiting gracefully"
+    - "Provide actionable error messages"
+
+# Webhook Patterns
+webhookPatterns:
+  signature_verification:
+    description: "Verify webhook signatures"
+    implementations:
+      facebook: "HMAC SHA256 with X-Hub-Signature-256 header"
+      twilio: "HMAC SHA1 with X-Twilio-Signature header"
+      stripe: "HMAC SHA256 with Stripe-Signature header"
+    
+  idempotency:
+    description: "Handle duplicate webhook deliveries"
+    pattern: |
+      # Store webhook event IDs to detect duplicates
+      class WebhookEvent < ApplicationRecord
+        validates :external_id, uniqueness: true
+      end
+      
+      def process_webhook(external_id, payload)
+        return if WebhookEvent.exists?(external_id: external_id)
+        
+        WebhookEvent.create!(external_id: external_id, payload: payload)
+        # Process event...
+      end
+  
+  retry_logic:
+    description: "Retry failed webhook deliveries"
+    pattern: |
+      # app/jobs/deliver_webhook_job.rb
+      class DeliverWebhookJob < ApplicationJob
+        retry_on Net::OpenTimeout, wait: :exponentially_longer, attempts: 5
+        retry_on Net::ReadTimeout, wait: :exponentially_longer, attempts: 5
+        
+        def perform(webhook_url, payload)
+          response = HTTParty.post(
+            webhook_url,
+            body: payload.to_json,
+            headers: { 'Content-Type' => 'application/json' },
+            timeout: 10
+          )
+          
+          raise StandardError, 'Webhook delivery failed' unless response.success?
+        end
+      end
+
+# Testing Patterns
+testingPatterns:
+  request_spec:
+    description: "Test API endpoints"
+    example: |
+      # spec/requests/api/v1/conversations_spec.rb
+      require 'rails_helper'
+      
+      RSpec.describe 'Api::V1::Conversations', type: :request do
+        let(:account) { create(:account) }
+        let(:user) { create(:user, account: account) }
+        let(:api_key) { user.access_token }
+        
+        describe 'GET /api/v1/conversations' do
+          it 'returns conversations' do
+            create_list(:conversation, 3, account: account)
+            
+            get '/api/v1/conversations',
+                headers: { 'api_access_token' => api_key }
+            
+            expect(response).to have_http_status(:ok)
+            expect(json_response['data'].size).to eq(3)
+          end
+          
+          it 'paginates results' do
+            create_list(:conversation, 30, account: account)
+            
+            get '/api/v1/conversations',
+                params: { page: 1, per_page: 10 },
+                headers: { 'api_access_token' => api_key }
+            
+            expect(response).to have_http_status(:ok)
+            expect(json_response['data'].size).to eq(10)
+            expect(json_response['meta']['total_count']).to eq(30)
+          end
+        end
+        
+        describe 'POST /api/v1/conversations' do
+          let(:valid_params) do
+            {
+              conversation: {
+                inbox_id: create(:inbox, account: account).id,
+                contact_id: create(:contact, account: account).id
+              }
+            }
+          end
+          
+          it 'creates conversation' do
+            expect {
+              post '/api/v1/conversations',
+                   params: valid_params,
+                   headers: { 'api_access_token' => api_key }
+            }.to change(Conversation, :count).by(1)
+            
+            expect(response).to have_http_status(:created)
+          end
+          
+          it 'returns errors for invalid data' do
+            post '/api/v1/conversations',
+                 params: { conversation: { inbox_id: nil } },
+                 headers: { 'api_access_token' => api_key }
+            
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json_response['errors']).to be_present
+          end
+        end
+      end
+  
+  webhook_spec:
+    description: "Test webhook processing"
+    example: |
+      # spec/requests/webhooks/facebook_spec.rb
+      require 'rails_helper'
+      
+      RSpec.describe 'Webhooks::Facebook', type: :request do
+        let(:channel) { create(:channel_facebook_page) }
+        let(:payload) do
+          {
+            entry: [{
+              id: channel.page_id,
+              messaging: [{
+                sender: { id: '123456' },
+                message: { text: 'Hello!' }
+              }]
+            }]
+          }
+        end
+        
+        describe 'POST /webhooks/facebook' do
+          it 'processes valid webhook' do
+            signature = generate_facebook_signature(payload.to_json)
+            
+            post '/webhooks/facebook',
+                 params: payload,
+                 headers: { 'X-Hub-Signature-256' => signature }
+            
+            expect(response).to have_http_status(:ok)
+          end
+          
+          it 'rejects invalid signature' do
+            post '/webhooks/facebook',
+                 params: payload,
+                 headers: { 'X-Hub-Signature-256' => 'invalid' }
+            
+            expect(response).to have_http_status(:unauthorized)
+          end
+        end
+      end
+  
+  external_api_mocking:
+    description: "Mock external API calls"
+    example: |
+      # spec/services/facebook/send_message_service_spec.rb
+      require 'rails_helper'
+      
+      RSpec.describe Facebook::SendMessageService do
+        let(:service) { described_class.new('token123') }
+        
+        describe '#send_text' do
+          it 'sends message successfully' do
+            stub_request(:post, 'https://graph.facebook.com/v18.0/me/messages')
+              .with(
+                query: { access_token: 'token123' },
+                body: hash_including(
+                  recipient: { id: '12345' },
+                  message: { text: 'Hello' }
+                )
+              )
+              .to_return(status: 200, body: { message_id: 'mid.123' }.to_json)
+            
+            result = service.send_text('12345', 'Hello')
+            
+            expect(result[:success]).to be true
+          end
+          
+          it 'handles rate limiting' do
+            stub_request(:post, 'https://graph.facebook.com/v18.0/me/messages')
+              .to_return(status: 429, headers: { 'Retry-After' => '60' })
+            
+            result = service.send_text('12345', 'Hello')
+            
+            expect(result[:success]).to be false
+            expect(result[:error]).to eq('Rate limited')
+          end
+        end
+      end
+
+# Common API Endpoints (Chatwoot specific)
+chatwootEndpoints:
+  conversations:
+    - "GET    /api/v1/conversations           # List"
+    - "GET    /api/v1/conversations/:id       # Show"
+    - "POST   /api/v1/conversations           # Create"
+    - "PATCH  /api/v1/conversations/:id       # Update"
+    - "DELETE /api/v1/conversations/:id       # Destroy"
+    - "POST   /api/v1/conversations/:id/messages  # Add message"
+  
+  messages:
+    - "GET    /api/v1/conversations/:conversation_id/messages"
+    - "POST   /api/v1/conversations/:conversation_id/messages"
+    - "PATCH  /api/v1/messages/:id"
+    - "DELETE /api/v1/messages/:id"
+  
+  contacts:
+    - "GET    /api/v1/contacts"
+    - "GET    /api/v1/contacts/:id"
+    - "POST   /api/v1/contacts"
+    - "PATCH  /api/v1/contacts/:id"
+    - "DELETE /api/v1/contacts/:id"
+  
+  inboxes:
+    - "GET    /api/v1/inboxes"
+    - "GET    /api/v1/inboxes/:id"
+    - "POST   /api/v1/inboxes"
+    - "PATCH  /api/v1/inboxes/:id"
+    - "DELETE /api/v1/inboxes/:id"
+
+# Commands
+commands:
+  routes:
+    - cmd: "bin/rails routes | grep api"
+      description: "List all API routes"
+    
+    - cmd: "bin/rails routes | grep v1"
+      description: "List V1 API routes"
+  
+  testing:
+    - cmd: "bundle exec rspec spec/requests/"
+      description: "Run all API tests"
+    
+    - cmd: "bundle exec rspec spec/requests/api/v1/conversations_spec.rb"
+      description: "Test specific endpoint"
+  
+  console:
+    - cmd: "HTTParty.get('http://localhost:3000/api/v1/conversations', headers: {'api_access_token' => 'token'})"
+      description: "Test API from console"
+
+# References
+references:
+  - name: "Chatwoot API Documentation"
+    path: "../docs/API.md"
+  
+  - name: "Rails Routing Guide"
+    url: "https://guides.rubyonrails.org/routing.html"
+  
+  - name: "RESTful API Design"
+    url: "https://restfulapi.net/"
+  
+  - name: "OAuth 2.0"
+    url: "https://oauth.net/2/"
